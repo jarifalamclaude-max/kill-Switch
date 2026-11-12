@@ -1,0 +1,892 @@
+<title>Kill Switch Board 3D</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* One column: the 3D board, its view and path buttons, the path explanation, then every part explained. */
+:root{
+  --bg:#eef1f3; --fg:#14202a; --muted:#566573; --line:#cdd6dd; --card:#ffffff; --stage-a:#f6f8f9; --stage-b:#d9e0e5; --btn:#ffffff;
+  --accent:#b35a12; --ok:#0b7d2b; --bad:#c23030; --shadow:0 8px 28px rgba(20,32,42,.16);
+  --display:"Barlow Condensed","Arial Narrow",sans-serif; --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0b1218; --fg:#e2e9ee; --muted:#93a2b0; --line:#24323d; --card:#121c24; --stage-a:#1a2731; --stage-b:#0e171e; --btn:#15222c;
+  --accent:#e8964f; --ok:#4cc46a; --bad:#f07070; --shadow:0 8px 28px rgba(0,0,0,.45); color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#0b1218; --fg:#e2e9ee; --muted:#93a2b0; --line:#24323d; --card:#121c24; --stage-a:#1a2731; --stage-b:#0e171e; --btn:#15222c;
+  --accent:#e8964f; --ok:#4cc46a; --bad:#f07070; --shadow:0 8px 28px rgba(0,0,0,.45); color-scheme:dark }
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,sans-serif;line-height:1.5;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));padding-block:20px 48px}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+h1{font-family:var(--display);font-size:clamp(1.9rem,4vw,2.7rem);margin:0;line-height:1.1;text-wrap:balance}
+h2{font-family:var(--display);font-size:clamp(1.4rem,3vw,1.9rem);margin:26px 0 0;line-height:1.15;text-wrap:balance}
+p{margin:0;color:var(--muted);max-width:76ch}
+#stage{position:relative;width:100%;height:min(68vh,660px);min-height:380px;border:1px solid var(--line);border-radius:12px;overflow:hidden;touch-action:none;
+  background:radial-gradient(120% 90% at 50% 30%, var(--stage-a), var(--stage-b))}
+#stage canvas{display:block;width:100%;height:100%;cursor:grab}
+#stage canvas.hot{cursor:pointer}
+#msg{position:absolute;inset:0;display:grid;place-items:center;font-family:var(--mono);color:var(--muted);padding:16px;text-align:center}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.bar .lab{font-family:var(--mono);font-size:.74rem;color:var(--muted);letter-spacing:.04em;text-transform:uppercase;margin-right:2px}
+button{font-family:var(--mono);font-size:.8rem;padding:6px 12px;border-radius:8px;border:1px solid var(--line);background:var(--btn);color:var(--fg);cursor:pointer}
+button[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 -2px 0 var(--accent)}
+button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.pbtn{display:inline-flex;align-items:center;gap:8px}
+.pbtn .sw{width:20px;height:8px;border-radius:4px;background:var(--c);box-shadow:inset 0 0 0 1px rgba(0,0,0,.35);flex:none}
+.pbtn[aria-pressed="true"]{border-color:var(--c);box-shadow:inset 0 -3px 0 var(--c)}
+.pbtn[aria-pressed="false"] .sw{opacity:.45}
+.legend{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:.8rem;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{display:inline-block;width:24px;height:0;border-top:5px solid #ff8c1a}
+.legend i.ctl{border-top:2px dashed #ff8c1a} .legend i.ret{border-top-color:#ffd8a8} .legend i.ghost{border-top:4px dotted #ff8c1a;opacity:.6}
+.legend i.box{width:14px;height:12px;border:2px solid #ff8c1a;border-radius:2px}
+.facts{display:flex;flex-wrap:wrap;gap:4px 18px;font-family:var(--mono);font-size:.76rem;color:var(--muted)}
+
+/* tapped part, on the stage */
+.tip{position:absolute;left:10px;bottom:10px;width:min(430px,calc(100% - 20px));background:var(--card);color:var(--fg);border:1px solid var(--line);
+  border-radius:10px;padding:10px 38px 10px 12px;font-size:.86rem;box-shadow:var(--shadow);max-height:calc(100% - 20px);overflow:auto}
+.tip[hidden]{display:none}
+.tip b{font-family:var(--mono)} .tip .pn{font-family:var(--mono);font-size:.76rem;color:var(--muted);display:block}
+.tip p{color:var(--fg);margin:6px 0 4px}
+.tip a{color:var(--accent);font-size:.8rem}
+.tip .x{position:absolute;top:6px;right:6px;padding:2px 8px;font-size:.9rem;line-height:1.2}
+
+/* path explanation */
+.panel{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);gap:12px 28px;align-items:start;border:1px solid var(--line);border-radius:12px;background:var(--card);padding:16px 18px}
+.panel h3{font-family:var(--display);font-size:1.4rem;margin:0 0 6px;line-height:1.2;color:var(--pc,var(--fg))}
+.panel p{color:var(--fg);max-width:70ch}
+.stats{margin:0;display:grid;grid-template-columns:auto minmax(0,1fr);gap:5px 14px;font-family:var(--mono);font-size:.78rem;font-variant-numeric:tabular-nums}
+.stats dt{color:var(--muted)} .stats dd{margin:0;overflow-wrap:anywhere}
+.chain{display:flex;flex-wrap:wrap;align-items:center;gap:6px 4px;margin:12px 0 0;padding:0;list-style:none;font-family:var(--mono);font-size:.76rem}
+.chain li{display:inline-flex;align-items:center;gap:4px}
+.chain li + li::before{content:"\2192";color:var(--muted);margin-right:2px}
+.chain b{font-weight:600;border:1px solid var(--pc,var(--line));border-radius:6px;padding:3px 8px;background:var(--bg)}
+@media (max-width:760px){ .panel{grid-template-columns:minmax(0,1fr);padding:14px} }
+
+/* parts */
+.jump{display:flex;flex-wrap:wrap;gap:6px 8px;font-family:var(--mono);font-size:.78rem}
+.jump a{color:var(--fg);text-decoration:none;border:1px solid var(--line);border-radius:999px;padding:3px 10px;background:var(--card)}
+.jump a:hover,.jump a:focus-visible{border-color:var(--accent);outline:none}
+.grp{display:flex;flex-direction:column;margin-top:6px;scroll-margin-top:12px}
+.grp h3{font-family:var(--display);font-size:1.4rem;margin:14px 0 6px;line-height:1.2;color:var(--accent)}
+.grp p.wide{max-width:82ch;color:var(--fg);margin:0 0 8px}
+.part{display:grid;grid-template-columns:210px minmax(0,1fr);gap:8px 28px;padding:14px 0;border-top:1px solid var(--line);scroll-margin-top:16px}
+.part:target{background:linear-gradient(90deg,color-mix(in srgb,var(--accent) 14%,transparent),transparent 70%)}
+.part header{display:flex;flex-direction:column;gap:4px;min-width:0;align-items:flex-start}
+.part .ref{font-family:var(--mono);font-weight:600;font-size:.92rem;line-height:1.35;padding:3px 9px;text-align:left}
+.part .pn{font-family:var(--mono);font-size:.76rem;color:var(--muted)}
+.part dl{margin:0;display:grid;grid-template-columns:96px minmax(0,1fr);gap:6px 16px;font-size:.92rem;min-width:0}
+.part dt{font-family:var(--mono);font-size:.72rem;letter-spacing:.03em;text-transform:uppercase;color:var(--muted);padding-top:3px}
+.part dd{margin:0;max-width:76ch;min-width:0;overflow-wrap:anywhere}
+code{font-family:var(--mono);font-size:.84em;background:var(--card);border:1px solid var(--line);border-radius:5px;padding:1px 5px;overflow-wrap:anywhere}
+@media (max-width:720px){ .part{grid-template-columns:minmax(0,1fr)} .part dl{grid-template-columns:minmax(0,1fr);gap:2px} .part dt{padding-top:8px} }
+.note{border-left:3px solid var(--accent);padding:6px 12px;color:var(--fg);background:var(--card);border-radius:0 8px 8px 0;max-width:86ch}
+</style>
+
+<div class="wrap">
+  <h1>Kill Switch Board 3D</h1>
+  <p>The through-hole magnetic kill switch, built from its KiCad board (<code>kicad/ks_tht.kicad_pcb</code>): real top and bottom copper, every part at its real place and height, and the paths the current takes. Drag to turn, scroll or pinch to zoom, tap any part to read what it does.</p>
+  <div id="stage"><div id="msg">Loading the 3D board…</div>
+    <div class="tip" id="tip" hidden role="status" aria-live="polite"><button class="x" id="tip-x" aria-label="Close">×</button>
+      <b id="tip-ref"></b><span class="pn" id="tip-pn"></span><p id="tip-job"></p><a id="tip-more" href="#explain">Details below</a></div>
+  </div>
+  <div class="bar" role="group" aria-label="View">
+    <span class="lab">View</span>
+    <button id="v-iso" aria-pressed="true">3D</button>
+    <button id="v-top" aria-pressed="false">Top</button>
+    <button id="v-bottom" aria-pressed="false">Bottom</button>
+    <button id="v-side" aria-pressed="false">Side</button>
+    <button id="t-parts" aria-pressed="false">Hide parts</button>
+    <button id="t-spin" aria-pressed="false">Auto rotate</button>
+  </div>
+  <div class="bar" id="pbar" role="group" aria-label="Current paths">
+    <span class="lab">Current paths</span>
+  </div>
+  <div class="legend" aria-hidden="true">
+    <span><i></i>the path's current, arrows show the direction</span>
+    <span><i class="ret"></i>its return</span>
+    <span><i class="ctl"></i>control signal (a few mA or less)</span>
+    <span><i class="ghost"></i>copper on the other side, seen through the board</span>
+    <span><i class="box"></i>the current goes through this part</span>
+  </div>
+  <section class="panel" id="panel" aria-live="polite">
+    <div><h3 id="s-title"></h3><p id="s-body"></p><ol class="chain" id="s-chain"></ol></div>
+    <dl class="stats" id="s-stats"></dl>
+  </section>
+  <div class="facts"><span>120 × 98 mm · 2 layers · 2 oz copper</span><span>all through-hole, 96 parts (4 are test pads)</span><span>4S–6S LiPo · XT60 in and out</span><span>30 A continuous · 60 A burst</span><span>DRC 0 errors, 0 unconnected</span></div>
+  <p class="note">Not built or tested yet. The numbers come from ngspice simulations of the netlist taken from this PCB (<code>kicad/simulation/results_tht.json</code>) and from hand calculations, marked “calculated”.</p>
+
+  <h2 id="explain">Every part: what it does and why that value</h2>
+  <p>Grouped by job. Tap a reference to find the part on the board above.</p>
+  <nav class="jump" aria-label="Part groups">
+    <a href="#g-power">Connectors and main switch</a><a href="#g-pre">Pre-charge</a><a href="#g-gate">Gate drive</a><a href="#g-arm">Sensors and arm chain</a><a href="#g-seq">Sequencing</a><a href="#g-v5">5 V supply</a><a href="#g-board">Wires, test pads, holes</a>
+  </nav>
+
+  <section class="grp" id="g-power">
+    <h3>Connectors and main switch</h3>
+    <p class="wide">The ESC current only touches J1, the VIN copper, Q1–Q4, the VOUT copper and J2 on the plus side, and the GND plane on the minus side. Everything else on the board handles a few milliamps.</p>
+    <article class="part" id="p-J1" data-refs="J1"><header><button class="ref" data-show="J1">J1</button><span class="pn">AMASS XT60PW-M, male, right-angle</span></header><dl>
+      <dt>Job</dt><dd>Battery input. Pin 2 is battery plus (VIN), pin 1 battery minus (GND). It hangs over the left edge so the battery lead plugs in from the side.</dd>
+      <dt>Rating</dt><dd>30 A continuous, 60 A for under a minute, so the board is rated the same. Put a 40 A fuse in the battery plus lead: the board kills a hard short in under 0.5 ms, a long overload is the fuse's job.</dd>
+      <dt>Why male</dt><dd>The battery has the female XT60, so the board needs the male one to mate with it.</dd>
+    </dl></article>
+    <article class="part" id="p-J2" data-refs="J2"><header><button class="ref" data-show="J2">J2</button><span class="pn">AMASS XT60PW-F, female, right-angle</span></header><dl>
+      <dt>Job</dt><dd>Output to the ESC harness. Pin 2 is the switched plus (VOUT), pin 1 is GND, joined straight to J1 pin 1 by the bottom copper plane and its wire.</dd>
+      <dt>Why female</dt><dd>The live side of a power connection gets the shrouded female contacts, so nothing exposed carries battery voltage.</dd>
+    </dl></article>
+    <article class="part" id="p-Q" data-refs="Q1 Q2 Q3 Q4"><header><button class="ref" data-show="Q1 Q2 Q3 Q4">Q1 – Q4</button><span class="pn">Infineon IRFB3206, N-MOSFET, TO-220, 60 V, 3.0 mΩ max</span></header><dl>
+      <dt>Job</dt><dd>The switch itself: four in parallel on the plus side. The middle pin (drain) sits in the VIN copper, the right pin (source) in the VOUT copper, the left pin is the gate.</dd>
+      <dt>Numbers</dt><dd>Simulated drop 25.2 mV at 30 A (0.75 W for all four, 0.19 W each) and 50.2 mV at 60 A (3 W). No heatsink needed at these currents.</dd>
+      <dt>Why N-channel</dt><dd>An N-MOSFET has a much lower resistance than a P-MOSFET of the same size. Its gate must go above the battery voltage, which is what the floating 12 V supply (U3) does.</dd>
+      <dt>Careful</dt><dd>The metal tabs are the drains: they are at battery plus. Keep them off the hull and any metal at ground.</dd>
+    </dl></article>
+    <article class="part" id="p-RG" data-refs="RG1 RG2 RG3 RG4"><header><button class="ref" data-show="RG1 RG2 RG3 RG4">RG1 – RG4</button><span class="pn">10 Ω, 1/4 W, one per gate</span></header><dl>
+      <dt>Job</dt><dd>Each MOSFET gate gets its own small resistor from the shared gate bus FG. Without them, four parallel MOSFETs can ring against each other at turn-on and turn-off.</dd>
+      <dt>Value</dt><dd>10 Ω is small next to R35 (10 kΩ) that sets the charging speed, so it does not slow the switch down.</dd>
+    </dl></article>
+    <article class="part" id="p-RS" data-refs="RS1 RS2 RS3 RS4"><header><button class="ref" data-show="RS1 RS2 RS3 RS4">RS1 – RS4</button><span class="pn">1 MΩ, gate to source</span></header><dl>
+      <dt>Job</dt><dd>Keep each gate at 0 V when nothing drives it, for example with a cracked solder joint on the gate bus or before the supply is up. A floating gate could turn a MOSFET half on.</dd>
+      <dt>Value</dt><dd>1 MΩ takes only 13 µA from the gate supply.</dd>
+    </dl></article>
+    <article class="part" id="p-D12" data-refs="D1 D2"><header><button class="ref" data-show="D1 D2">D1, D2</button><span class="pn">1.5KE33A TVS diode, 1500 W, 28.2 V standoff</span></header><dl>
+      <dt>Job</dt><dd>D1 sits across the battery side (VIN to GND), D2 across the ESC side (VOUT to GND). When 60 A is cut in a millisecond, the inductance of the battery and ESC leads kicks the voltage up; the TVS clamps it.</dd>
+      <dt>Numbers</dt><dd>Simulated battery-side peak when 60 A is killed: 17.6 V on 4S, 25.9 V on 6S. In a hard short while running: 21.2 V (4S) and 30.6 V (6S).</dd>
+      <dt>Value</dt><dd>28.2 V standoff: it does not conduct at a full 6S pack (25.2 V).</dd>
+    </dl></article>
+    <article class="part" id="p-RK" data-refs="RK1 RK2"><header><button class="ref" data-show="RK1 RK2">RK1, RK2</button><span class="pn">0 Ω links</span></header><dl>
+      <dt>Job</dt><dd>Kelvin taps. RK1 takes VIN for the logic (net VIN_K) from one quiet point of the VIN copper; RK2 gives the gate supply its 0 V (net SRC) at VOUT. The pre-charge resistors also join VOUT there, on the bottom layer.</dd>
+      <dt>Why</dt><dd>The 30 A current never flows in the thin logic tracks, so the voltages the logic sees stay clean.</dd>
+    </dl></article>
+  </section>
+
+  <section class="grp" id="g-pre">
+    <h3>Pre-charge</h3>
+    <p class="wide">ESCs carry large capacitors. Switching the battery straight onto them would pull hundreds of amps for a moment, enough to spark the XT60 and stress the MOSFETs. The board fills them through 11 Ω first.</p>
+    <article class="part" id="p-Q5" data-refs="Q5"><header><button class="ref" data-show="Q5">Q5</button><span class="pn">IRF9540N, P-MOSFET, TO-220, −100 V</span></header><dl>
+      <dt>Job</dt><dd>Switches the pre-charge path on: source at VIN, drain to F1. It carries 1.4–2.1 A for a fraction of a second at each start.</dd>
+    </dl></article>
+    <article class="part" id="p-R1" data-refs="R1 R2 D3"><header><button class="ref" data-show="R1 R2 D3">R1, R2, D3</button><span class="pn">47 kΩ · 22 kΩ · BZX55C12 zener 12 V</span></header><dl>
+      <dt>Job</dt><dd>Q5's gate. R1 holds it at VIN (off). When Q6 pulls R2 down, the gate goes to VIN × 22/69: gate to source −11.4 V on a full 4S pack.</dd>
+      <dt>D3</dt><dd>On 6S the divider would give −17 V; the 12 V zener stops it at −12 V, well inside the ±20 V limit.</dd>
+    </dl></article>
+    <article class="part" id="p-Q6" data-refs="Q6"><header><button class="ref" data-show="Q6">Q6</button><span class="pn">2N7000, N-MOSFET, TO-92</span></header><dl>
+      <dt>Job</dt><dd>Pulls Q5's gate down through R2 when PCEN (from the LM339) is high.</dd>
+    </dl></article>
+    <article class="part" id="p-F1" data-refs="F1"><header><button class="ref" data-show="F1">F1</button><span class="pn">Littelfuse RXEF050 PTC, 0.5 A hold, 72 V</span></header><dl>
+      <dt>Job</dt><dd>If the pre-charge stayed on into a fault, the PTC heats up within seconds and cuts the current to a trickle, so R3 and R4 do not burn.</dd>
+      <dt>Value</dt><dd>A normal pre-charge (1.4–2.1 A for about 0.1 s) is far too short to trip it.</dd>
+    </dl></article>
+    <article class="part" id="p-R3" data-refs="R3 R4"><header><button class="ref" data-show="R3 R4">R3, R4</button><span class="pn">22 Ω 2 W each, in parallel = 11 Ω</span></header><dl>
+      <dt>Job</dt><dd>Limit the pre-charge current: simulated 1.38 A on 4S and 2.08 A on 6S. They join VOUT on the bottom layer at RK2.</dd>
+      <dt>Energy</dt><dd>Each start puts 0.43 J (4S) or 1.0 J (6S) into the pair; into a shorted output the LM339 stops it after 0.30 J. Each resistor takes a 1.5 J pulse.</dd>
+    </dl></article>
+  </section>
+
+  <section class="grp" id="g-gate">
+    <h3>Floating gate drive</h3>
+    <p class="wide">The gates of Q1–Q4 must sit about 10–13 V above their sources, and the sources are at battery voltage when the switch is on. So the gate supply floats: its 0 V is VOUT.</p>
+    <article class="part" id="p-U3" data-refs="U3"><header><button class="ref" data-show="U3">U3</button><span class="pn">Mornsun B0512S-1WR3, 5 V → 12 V isolated, 1 W, SIP-4</span></header><dl>
+      <dt>Job</dt><dd>The gate supply. Its output 0 V (pin 3, net SRC) is tied to VOUT through RK2, so its +12 V (pin 4) is always about 12 V above the MOSFET sources, whatever the pack voltage.</dd>
+      <dt>Numbers</dt><dd>Unregulated: about 14.3 V at the light load here (simulated). Gates get 13.3 V.</dd>
+      <dt>Check</dt><dd>Pin order on the board: 1 GND, 2 Vin, 3 0 V, 4 +Vo. Check it against the datasheet of the module you buy.</dd>
+    </dl></article>
+    <article class="part" id="p-C45" data-refs="C4 C5"><header><button class="ref" data-show="C4 C5">C4, C5</button><span class="pn">10 µF 16 V · 22 µF 25 V electrolytic</span></header><dl>
+      <dt>Job</dt><dd>C4 on U3's 5 V input, C5 on its floating output (V12F to SRC). The module switches internally and needs both.</dd>
+    </dl></article>
+    <article class="part" id="p-R33" data-refs="R33 D5"><header><button class="ref" data-show="R33 D5">R33, D5</button><span class="pn">4.7 kΩ · 1N4744A zener 15 V 1 W</span></header><dl>
+      <dt>Job</dt><dd>R33 is a minimum load: unregulated modules climb well above 12 V with no load. D5 caps the floating supply at 15 V, below the MOSFETs' 20 V gate limit.</dd>
+    </dl></article>
+    <article class="part" id="p-U4" data-refs="U4"><header><button class="ref" data-show="U4">U4</button><span class="pn">PC817 optocoupler, DIP-4</span></header><dl>
+      <dt>Job</dt><dd>Its LED is on the 5 V side, lit by Q10 and Q11 through R32 (about 11 mA). Its transistor connects the floating 12 V to DRV. Only light crosses, so the 5 V logic never touches the floating supply.</dd>
+    </dl></article>
+    <article class="part" id="p-R34" data-refs="R34"><header><button class="ref" data-show="R34">R34</button><span class="pn">22 kΩ</span></header><dl>
+      <dt>Job</dt><dd>Pulls DRV down to SRC when U4 lets go. That is what turns Q12 on to empty the gates.</dd>
+    </dl></article>
+    <article class="part" id="p-D10" data-refs="D10 R35"><header><button class="ref" data-show="D10 R35">D10, R35</button><span class="pn">1N4148 · 10 kΩ</span></header><dl>
+      <dt>Job</dt><dd>Feed the gate bus FG from DRV. R35 sets how fast the gates charge (about 1.4 mA, calculated). D10 lets DRV fall below FG at turn-off so Q12 can switch on.</dd>
+    </dl></article>
+    <article class="part" id="p-C6" data-refs="C6 R39"><header><button class="ref" data-show="C6 R39">C6, R39</button><span class="pn">220 nF 100 V film · 100 Ω</span></header><dl>
+      <dt>Job</dt><dd>Soft start. C6 (FG to GND through R39) makes the gates rise slowly, so VOUT ramps up instead of jumping: 18.9 A peak when the MOSFETs close (simulated) instead of hundreds.</dd>
+      <dt>R39</dt><dd>Lets FG follow a sudden VOUT drop in a short instead of C6 holding the gates up: the simulated gate-to-source peak in a hard short is 15.9 V (4S) and 16.1 V (6S).</dd>
+      <dt>Why film</dt><dd>A film capacitor keeps its value at 25 V; a ceramic would lose much of it.</dd>
+    </dl></article>
+    <article class="part" id="p-D11" data-refs="D11"><header><button class="ref" data-show="D11">D11</button><span class="pn">P6KE18A TVS diode, 600 W</span></header><dl>
+      <dt>Job</dt><dd>Gate-to-source clamp. If VOUT falls in microseconds (a short), it keeps the gates within 18 V of the sources, under the 20 V limit.</dd>
+    </dl></article>
+    <article class="part" id="p-Q12" data-refs="Q12 R36 R37 D6 R38"><header><button class="ref" data-show="Q12 R36 R37 D6 R38">Q12, R36, R37, D6, R38</button><span class="pn">BC327 PNP · 47 Ω · 10 kΩ · 1N4148 · 1 kΩ</span></header><dl>
+      <dt>Job</dt><dd>Fast turn-off. When DRV falls, D6 and R38 pull Q12's base below its emitter (on FG). Q12 then dumps the gate charge into SRC through R36, and the four MOSFETs turn off together.</dd>
+      <dt>R37</dt><dd>Holds Q12 off while the gates are being driven.</dd>
+    </dl></article>
+  </section>
+
+  <section class="grp" id="g-arm">
+    <h3>Sensors and arm chain</h3>
+    <p class="wide">Two different sensors in series: the reed passes 5 V on, and the Hall sensor lets Q7 pass it to ARM. A stuck Hall, a welded reed, a cut cable, a Hall without power or a shorted Hall wire still kill (all simulated, 1.53–1.59 ms).</p>
+    <article class="part" id="p-J3" data-refs="J3 R8"><header><button class="ref" data-show="J3 R8">J3, R8</button><span class="pn">JST XH 3-pin · 100 Ω</span></header><dl>
+      <dt>Job</dt><dd>The KY-003 Hall module (1 = S, 2 = +, 3 = −). Its A3144 pulls S low when a south pole is near. R8 feeds it 5 V (net V5S) and limits the current if the cable is shorted.</dd>
+      <dt>Check</dt><dd>Measure the module's pin order: some clones swap + and −.</dd>
+    </dl></article>
+    <article class="part" id="p-J4" data-refs="J4 R9"><header><button class="ref" data-show="J4 R9">J4, R9</button><span class="pn">JST XH 2-pin · 100 Ω</span></header><dl>
+      <dt>Job</dt><dd>The MC-38 reed door contact, closed by the magnet. R9 feeds it (about 3.5 mA, calculated) and limits a short in the cable.</dd>
+    </dl></article>
+    <article class="part" id="p-Q7" data-refs="Q7 R10 R11"><header><button class="ref" data-show="Q7 R10 R11">Q7, R10, R11</button><span class="pn">2N3906 PNP · 10 kΩ · 47 kΩ</span></header><dl>
+      <dt>Job</dt><dd>The second switch in series. The reed brings 5 V to Q7's emitter; Q7 turns on when the Hall pulls its base down through R10. R11 holds it off otherwise. So ARM is high only with the reed closed and the Hall on.</dd>
+    </dl></article>
+    <article class="part" id="p-R12" data-refs="R12"><header><button class="ref" data-show="R12">R12</button><span class="pn">4.7 kΩ</span></header><dl>
+      <dt>Job</dt><dd>Pulls ARM to 0 V as soon as either sensor lets go, so a cut cable reads as “magnet out”.</dd>
+    </dl></article>
+    <article class="part" id="p-R15" data-refs="R15 C7"><header><button class="ref" data-show="R15 C7">R15, C7</button><span class="pn">100 kΩ · 10 µF 16 V</span></header><dl>
+      <dt>Job</dt><dd>Arm delay. EN charges through R15 and crosses 2.5 V about 0.8 s after the plug goes in (simulated: live after 816 ms). A plug still wobbling into place does not switch the ESCs on and off.</dd>
+    </dl></article>
+    <article class="part" id="p-Q8" data-refs="Q8 R16 R17"><header><button class="ref" data-show="Q8 R16 R17">Q8, R16, R17</button><span class="pn">2N3904 · 10 kΩ · 10 kΩ</span></header><dl>
+      <dt>Job</dt><dd>Inverter: NARM is high when ARM is low. R16 drives Q8's base from ARM, R17 pulls NARM up.</dd>
+    </dl></article>
+    <article class="part" id="p-Q9" data-refs="Q9 R18 R19 R20"><header><button class="ref" data-show="Q9 R18 R19 R20">Q9, R18, R19, R20</button><span class="pn">2N3904 · 10 kΩ · 100 kΩ · 220 Ω</span></header><dl>
+      <dt>Job</dt><dd>Fast EN discharge. When NARM goes high, Q9 turns on and C7 empties through R20 (220 Ω × 10 µF = 2.2 ms time constant): EN is below 2.5 V about 1.3 ms after ARM drops, and the ESCs are off 1.6 ms after the magnet leaves.</dd>
+      <dt>Why</dt><dd>A slow fall would be a slow kill. A gap shorter than about 1 ms (vibration) is still ignored: 0.8 ms of chatter stays live in the simulation. R19 keeps Q9 off when its base is not driven.</dd>
+    </dl></article>
+    <article class="part" id="p-D7" data-refs="D7 R13 D8 R14"><header><button class="ref" data-show="D7 R13 D8 R14">D7, R13, D8, R14</button><span class="pn">blue LEDs 3 mm · 1 kΩ each</span></header><dl>
+      <dt>Job</dt><dd>D7 (HALL) lights when the Hall sees the magnet, D8 (REED) when the reed is closed, about 2 mA each. Before a dive both must be on; one alone means a sensor is not seeing the magnet.</dd>
+    </dl></article>
+  </section>
+
+  <section class="grp" id="g-seq">
+    <h3>Sequencing: one LM339</h3>
+    <p class="wide">Four comparators decide the order: pre-charge when armed, abort if VOUT cannot keep up, go live when VOUT has reached half of VIN, and reset everything when the magnet leaves.</p>
+    <article class="part" id="p-U2" data-refs="U2 C3"><header><button class="ref" data-show="U2 C3">U2, C3</button><span class="pn">LM339N quad comparator, DIP-14 in a socket · 100 nF</span></header><dl>
+      <dt>A</dt><dd>Pins 4, 5 → 2: EN above REF lets PCEN rise (start pre-charge).</dd>
+      <dt>B</dt><dd>Pins 6, 7 → 1: VOD below RAMP pulls PCEN down (abort, or kill on a short while running).</dd>
+      <dt>C</dt><dd>Pins 8, 9 → 14: VOD above VIND raises DONE (VOUT is above about half of VIN).</dd>
+      <dt>D</dt><dd>Pins 10, 11 → 13: EN below REF pulls RRST down, which empties the ramp.</dd>
+      <dt>Note</dt><dd>Open-collector outputs: A and B share PCEN, either can pull it low. C3 decouples its 5 V.</dd>
+    </dl></article>
+    <article class="part" id="p-R6" data-refs="R6 R7 C8"><header><button class="ref" data-show="R6 R7 C8">R6, R7, C8</button><span class="pn">10 kΩ · 10 kΩ · 100 nF</span></header><dl>
+      <dt>Job</dt><dd>REF = half of 5 V = 2.5 V, for comparators A and D.</dd>
+    </dl></article>
+    <article class="part" id="p-R21" data-refs="R21 R22 R23 C9"><header><button class="ref" data-show="R21 R22 R23 C9">R21, R22, R23, C9</button><span class="pn">75 kΩ 1 % · 10 kΩ 1 % · 470 kΩ · 10 nF</span></header><dl>
+      <dt>Job</dt><dd>VOD = VOUT ÷ 8.7 plus 0.09 V (from 5 V through R23), so at the first instant VOD sits just above a ramp that starts at 0 V. C9 filters it.</dd>
+    </dl></article>
+    <article class="part" id="p-R24" data-refs="R24 R25 C10"><header><button class="ref" data-show="R24 R25 C10">R24, R25, C10</button><span class="pn">160 kΩ 1 % · 10 kΩ 1 % · 10 nF</span></header><dl>
+      <dt>Job</dt><dd>VIND = VIN ÷ 17. DONE rises when VOD > VIND, which works out to VOUT above about half of VIN.</dd>
+    </dl></article>
+    <article class="part" id="p-R26" data-refs="R26 R27 C11"><header><button class="ref" data-show="R26 R27 C11">R26, R27, C11</button><span class="pn">1 MΩ · 68 kΩ · 3.3 µF X7R ceramic</span></header><dl>
+      <dt>Job</dt><dd>The ramp: once EN is up it rises toward VIN × 0.064 with a 0.21 s time constant (calculated). VOUT, charging through 11 Ω, must stay ahead of it. A shorted ESC bus cannot, so the pre-charge stops after 0.30 J and stays off until the magnet is pulled.</dd>
+      <dt>Why ceramic</dt><dd>An electrolytic's leakage current would upset a ramp fed through 1 MΩ.</dd>
+    </dl></article>
+    <article class="part" id="p-R28" data-refs="R28"><header><button class="ref" data-show="R28">R28</button><span class="pn">1 kΩ</span></header><dl>
+      <dt>Job</dt><dd>Comparator D empties C11 through it while EN is low, so every start begins from 0 V.</dd>
+    </dl></article>
+    <article class="part" id="p-R29" data-refs="R29 R30"><header><button class="ref" data-show="R29 R30">R29, R30</button><span class="pn">10 kΩ</span></header><dl>
+      <dt>Job</dt><dd>Pull-ups for PCEN and DONE: the LM339 can only pull its outputs down.</dd>
+    </dl></article>
+    <article class="part" id="p-Q10" data-refs="Q10 Q11"><header><button class="ref" data-show="Q10 Q11">Q10, Q11</button><span class="pn">2N7000, in series</span></header><dl>
+      <dt>Job</dt><dd>An AND gate: CATH is pulled down only when PCEN (Q10) and DONE (Q11) are both high. Then U4's LED and the LIVE LED light and the gates turn on.</dd>
+    </dl></article>
+    <article class="part" id="p-D9" data-refs="D9 R31"><header><button class="ref" data-show="D9 R31">D9, R31</button><span class="pn">red LED 3 mm · 1 kΩ</span></header><dl>
+      <dt>Job</dt><dd>LIVE: on when the ESCs are powered, about 3 mA. It shares CATH with U4's LED, so it shows what the gate drive is told.</dd>
+    </dl></article>
+    <article class="part" id="p-R32" data-refs="R32"><header><button class="ref" data-show="R32">R32</button><span class="pn">330 Ω</span></header><dl>
+      <dt>Job</dt><dd>U4's LED current, about 11 mA (calculated): plenty for the PC817 to drive the gate bus through 10 kΩ.</dd>
+    </dl></article>
+  </section>
+
+  <section class="grp" id="g-v5">
+    <h3>5 V supply</h3>
+    <article class="part" id="p-D4" data-refs="D4"><header><button class="ref" data-show="D4">D4</button><span class="pn">1N4007</span></header><dl>
+      <dt>Job</dt><dd>Blocks a reversed battery from the logic. (The power path has no reverse protection: the XT60 is keyed, keep it that way.)</dd>
+    </dl></article>
+    <article class="part" id="p-R5" data-refs="R5 C1"><header><button class="ref" data-show="R5 C1">R5, C1</button><span class="pn">10 Ω · 47 µF 50 V</span></header><dl>
+      <dt>Job</dt><dd>Filter in front of the 7805: limits the surge into C1 at plug-in and smooths spikes on VIN.</dd>
+    </dl></article>
+    <article class="part" id="p-U1" data-refs="U1"><header><button class="ref" data-show="U1">U1</button><span class="pn">L7805CV, TO-220, lying flat, tab = GND</span></header><dl>
+      <dt>Job</dt><dd>5 V for everything on the logic side: sensors, LM339, LEDs and the B0512S.</dd>
+      <dt>Heat</dt><dd>On 6S it drops about 19 V. A K7805-500R3 or R-78E5.0-0.5 switching module fits the same holes and runs cool.</dd>
+    </dl></article>
+    <article class="part" id="p-C2" data-refs="C2"><header><button class="ref" data-show="C2">C2</button><span class="pn">10 µF 25 V</span></header><dl>
+      <dt>Job</dt><dd>The 7805's output capacitor.</dd>
+    </dl></article>
+  </section>
+
+  <section class="grp" id="g-board">
+    <h3>Wires, test pads, holes</h3>
+    <article class="part" id="p-WIRE" data-refs="WIRE"><header><button class="ref" data-show="WIRE">12 AWG wires</button><span class="pn">bare copper wire on three open strips</span></header><dl>
+      <dt>Job</dt><dd>The solder mask is left off three strips: VIN on top above the MOSFET pins, VOUT on top between the 1 MΩ and 10 Ω resistors, and GND underneath from the battery XT60 to the ESC XT60. A 12 AWG bare copper wire (or a thick layer of solder) on each carries most of the current, so the 2 oz copper does not have to.</dd>
+    </dl></article>
+    <article class="part" id="p-TP" data-refs="TP1 TP2 TP3 TP4"><header><button class="ref" data-show="TP1 TP2 TP3 TP4">TP1 – TP4</button><span class="pn">test pads: FG, EN, V5, GND</span></header><dl>
+      <dt>Job</dt><dd>For a meter or scope. FG shows the gate bus (about VOUT + 13 V when live), EN the arm delay and the kill.</dd>
+    </dl></article>
+    <article class="part" id="p-H" data-refs="H1 H2 H3 H4"><header><button class="ref" data-show="H1 H2 H3 H4">H1 – H4</button><span class="pn">M3 mounting holes</span></header><dl>
+      <dt>Job</dt><dd>Mount the board on nylon screws and standoffs: the copper near the top holes is live.</dd>
+    </dl></article>
+  </section>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+/* ---------- generated by make_3d_data.py from ../kicad/ks_tht.kicad_pcb ---------- */
+const BW = 120, BH = 98;
+const PARTS = [];
+const PATHS = {};
+const WIRES = [];
+/* ---------- end generated ---------- */
+
+// ------------------------------------------------------------------ the current paths: text, colours, labels
+const PDEF = [
+  { id: "main", name: "Main 30 / 60 A", color: "#ff8c1a", ret: "#ffd8a8",
+    title: "Main current: battery → 4 MOSFETs → ESCs",
+    body: "Battery plus enters at J1 pin 2, spreads into the VIN copper on the top layer and runs along the soldered 12 AWG wire above the MOSFET row. Each drain (middle pin) of Q1–Q4 takes its share; with the gates 13.3 V above the sources the MOSFETs conduct, and the current leaves by the sources into the VOUT copper, rides the second wire to the right and goes out through J2 pin 2 to the ESCs. It comes back on J2 pin 1 and crosses the board on the bottom GND plane and its wire to J1 pin 1: the battery minus is never switched.",
+    chain: ["J1 + (XT60)", "VIN copper + wire", "Q1–Q4 drain → source", "VOUT copper + wire", "J2 + → ESCs", "J2 −", "GND plane + wire (bottom)", "J1 −"],
+    stats: [["Current", "30 A continuous, 60 A burst (XT60 rating)"], ["Drop, 4 MOSFETs", "25.2 mV at 30 A · 50.2 mV at 60 A"], ["Heat in the MOSFETs", "0.75 W at 30 A (0.19 W each) · 3 W at 60 A"], ["Gate to source", "13.3 V on 4S and 6S"], ["Spike when 60 A is cut", "17.6 V (4S) · 25.9 V (6S), D1 and D2 clamp"]],
+    labels: [["J1", "J1 battery in"], [["Q1", "Q2", "Q3", "Q4"], "Q1–Q4"], ["J2", "J2 to ESCs"], [[100, 16, -9], "return on the bottom plane"]] },
+  { id: "pre", name: "Pre-charge", color: "#ffd43b",
+    title: "Pre-charge: fill the ESC capacitors through 11 Ω first",
+    body: "Before the big MOSFETs close, Q5 (P-channel) joins VIN to the pre-charge path: the PTC F1 and R3 ∥ R4 (2 × 22 Ω = 11 Ω), which meet VOUT on the bottom layer at RK2. The ESC capacitors (4000 µF in the simulation) charge with 1.4 A instead of a few hundred amps. Q6, switched by PCEN from the LM339, pulls Q5's gate down through R2; R1 holds it off otherwise and D3 keeps its gate at 12 V below the source on 6S.",
+    chain: ["J1 +", "VIN copper", "Q5 IRF9540N", "F1 PTC", "R3 ∥ R4 11 Ω", "VOUT at RK2", "VOUT copper", "J2 + → ESC capacitors"],
+    stats: [["Pre-charge current", "1.38 A (4S, 16.8 V) · 2.08 A (6S, 25.2 V)"], ["Energy in R3 + R4", "0.43 J (4S) · 1.0 J (6S) per start"], ["Peak power in R3 + R4", "21 W (4S) · 47 W (6S), for a moment"], ["ESC side shorted at start", "stops after 0.30 J, never goes live"], ["MOSFETs close at", "VOUT above ½ VIN: 18.9 A peak then"], ["Live after the magnet", "816 ms (4S) · 819 ms (6S)"]],
+    labels: [["Q5", "Q5"], ["F1", "F1 PTC"], [["R3", "R4"], "R3 ∥ R4 11 Ω"]] },
+  { id: "gate", name: "Gate drive", color: "#ff6fb5", ret: "#ffc2dd",
+    title: "Gate drive: a floating 12 V supply riding on VOUT",
+    body: "U3 (B0512S) turns 5 V into an isolated 12 V. Its 0 V (pin 3, net SRC) is tied to VOUT at RK2, so its +12 V is always about 13 V above the MOSFET sources, on any pack. When the LIVE logic lights U4's LED, U4's transistor connects that supply to DRV; through D10 and R35 (10 kΩ) it charges the gate bus FG, which runs on the bottom layer through TP1 and along RG1–RG4 (10 Ω each) to the four gates. The gate current returns from the sources through VOUT and RK2 to U3. C6 (behind R39) slows the gates so VOUT ramps; D11 clamps gate to source; D5 and R33 keep the unregulated module below 15 V.",
+    chain: ["V5", "U3 B0512S", "+12 V floating", "U4 PC817", "D10 + R35 10 kΩ", "FG bus (bottom)", "RG1–RG4 10 Ω", "Q1–Q4 gates", "VOUT → RK2 → U3 0 V"],
+    stats: [["Module output", "14.3 V at this light load (unregulated)"], ["Gate to source when on", "13.3 V"], ["Gate charging current", "about 1.4 mA through R35 (calculated)"], ["Soft start", "18.9 A peak when the MOSFETs close"], ["Gate to source in a hard short", "15.9 V (4S) · 16.1 V (6S) max, limit 20 V"]],
+    labels: [["U3", "U3 floating 12 V"], ["U4", "U4 opto"], ["TP1", "FG bus (bottom)"], [["C6", "R39"], "C6 soft start"]] },
+  { id: "arm", name: "Arm chain", color: "#4dabf7",
+    title: "Arm chain: both sensors must see the magnet",
+    body: "5 V goes through R9 and the reed contact (J4, closed by the magnet) to the emitter of Q7. Q7 conducts only when the Hall module on J3 pulls its output low, which pulls Q7's base down through R10. Then ARM rises to about 4.5 V and charges C7 (10 µF) through R15 (100 kΩ); EN crosses 2.5 V about 0.8 s later. Each sensor has its own blue LED: D7 (HALL) and D8 (REED).",
+    chain: ["V5", "R9 100 Ω", "J4 reed (closed)", "Q7 2N3906, base from J3 Hall via R10", "ARM", "R15 100 kΩ", "EN", "C7 10 µF"],
+    stats: [["ARM when armed", "about 4.5 V (calculated)"], ["Through the reed", "about 3.5 mA (calculated)"], ["Arm delay", "live 816 ms after the magnet (4S)"], ["HALL and REED LEDs", "about 2 mA each"]],
+    labels: [["J4", "J4 reed"], ["J3", "J3 Hall"], ["Q7", "Q7"], [["R15", "C7"], "R15 + C7: 0.8 s"]] },
+  { id: "seq", name: "Sequencing", color: "#b197fc",
+    title: "Sequencing: one LM339 decides when to pre-charge and when to go live",
+    body: "Comparator A lets PCEN rise (R29 pull-up) once EN is above REF (2.5 V): Q6 starts the pre-charge. Comparator B pulls PCEN back down if VOD (about VOUT ÷ 8.7) falls below RAMP, a voltage that rises with VIN over about 0.2 s: a shorted ESC bus never keeps up, so the pre-charge stops and stays off until the magnet is pulled; while running, a short drops VOD and the same comparator kills. Comparator C raises DONE when VOUT is above about half of VIN. Q10 and Q11 in series pull CATH down only when PCEN and DONE are both high: U4's LED (330 Ω) and the red LIVE LED D9 (1 kΩ) light, and the gates turn on. Comparator D holds RAMP at 0 V through R28 while EN is low.",
+    chain: ["EN > REF → PCEN", "VOD < RAMP → PCEN low (abort)", "VOD > VIND → DONE", "PCEN + DONE → Q10 + Q11", "U4 LED + D9 LIVE"],
+    stats: [["REF", "2.5 V from R6 and R7"], ["Goes live when", "VOUT above about ½ VIN"], ["RAMP", "VIN × 0.064, 0.21 s time constant (calculated)"], ["U4 LED · LIVE LED", "about 11 mA · 3 mA (calculated)"], ["Short while running", "off in 0.47 ms; peak 872 A (4S) · 1298 A (6S); 1.1 J · 2.6 J shared by the 4 MOSFETs"], ["Start into a short", "never goes live"]],
+    labels: [["U2", "U2 LM339"], [["Q10", "Q11"], "Q10 + Q11"], ["D9", "LIVE"], ["U4", "U4 LED"]] },
+  { id: "kill", name: "Kill (magnet out)", color: "#ff4b4b",
+    title: "Kill: magnet pulled, ESCs off in 1.6 ms",
+    body: "Pulling the plug opens the reed and releases the Hall, so Q7 turns off and R12 pulls ARM down. Q8 lets go of NARM, R17 pulls it up and Q9 turns on: C7 empties through R20 (220 Ω) and EN falls below 2.5 V in about 1.3 ms. Comparator A pulls PCEN down, Q10 turns off, U4's LED goes dark and R34 pulls DRV down to SRC. That pulls Q12's base down through R38 and D6: Q12 dumps the gate charge from the FG bus (and C6 through R39) into SRC through R36 (47 Ω), and Q1–Q4 turn off.",
+    chain: ["ARM low", "Q8 off → NARM high", "Q9 on", "C7 → R20 220 Ω", "EN below 2.5 V", "PCEN low → U4 off", "DRV → SRC", "Q12 on", "gates → R36 47 Ω → SRC"],
+    stats: [["Off after the magnet leaves", "1.59 ms (4S and 6S)"], ["With one sensor faulty", "1.53–1.59 ms (stuck Hall, welded reed, cut cable, Hall without 5 V)"], ["Ignored gap", "0.8 ms of sensor chatter stays live"], ["EN discharge", "220 Ω × 10 µF = 2.2 ms time constant"], ["Energy in the MOSFETs at a 60 A kill", "9 mJ (4S) · 11 mJ (6S)"]],
+    labels: [["Q9", "Q9 empties EN"], ["Q12", "Q12 empties the gates"], ["R20", "R20 220 Ω"]] },
+  { id: "v5", name: "5 V supply", color: "#f1f3f5",
+    title: "5 V logic supply",
+    body: "VIN is tapped at RK1, a 0 Ω link, so the 30 A current never runs in the logic wiring. VIN_K runs down the board on the top layer, through D4 (blocks a reversed battery) and R5 (10 Ω; with C1, 47 µF, it smooths spikes and limits the surge at plug-in) to U1, the L7805, which makes 5 V (C2, 10 µF). That 5 V feeds the sensors, the LM339, the LEDs and the B0512S gate supply.",
+    chain: ["J1 +", "VIN copper", "RK1 0 Ω", "VIN_K", "D4 1N4007", "R5 10 Ω + C1", "U1 L7805", "5 V → U3, U2, LEDs, sensors"],
+    stats: [["Input", "12–25.2 V (4S–6S)"], ["Drop in the 7805 on 6S", "about 19 V"], ["Option", "a K7805-500R3 or R-78E5.0-0.5 module fits the same holes and runs cool"]],
+    labels: [["RK1", "RK1 VIN tap"], ["D4", "D4"], ["U1", "U1 L7805 → 5 V"]] }
+];
+const STATE = { on: new Set(["main"]), shown: "main" };
+
+// ------------------------------------------------------------------ buttons and the explanation (works without the 3D library)
+(function () {
+  const $ = id => document.getElementById(id);
+  const bar = $("pbar");
+  PDEF.forEach(d => {
+    const b = document.createElement("button");
+    b.className = "pbtn"; b.dataset.path = d.id; b.style.setProperty("--c", d.color);
+    b.innerHTML = '<i class="sw"></i>'; b.append(d.name);
+    b.addEventListener("click", () => {
+      if (STATE.on.has(d.id)) { STATE.on.delete(d.id); if (STATE.shown === d.id) STATE.shown = [...STATE.on].pop() || null; }
+      else { STATE.on.add(d.id); STATE.shown = d.id; }
+      render();
+    });
+    bar.append(b);
+  });
+  const all = document.createElement("button"); all.textContent = "All"; all.addEventListener("click", () => { PDEF.forEach(d => STATE.on.add(d.id)); render(); });
+  const none = document.createElement("button"); none.textContent = "None"; none.addEventListener("click", () => { STATE.on.clear(); STATE.shown = null; render(); });
+  bar.append(all, none);
+  function render() {
+    document.querySelectorAll(".pbtn").forEach(b => b.setAttribute("aria-pressed", String(STATE.on.has(b.dataset.path))));
+    const d = PDEF.find(x => x.id === STATE.shown), panel = $("panel");
+    panel.style.setProperty("--pc", d ? (d.id === "v5" ? "var(--fg)" : d.color) : "var(--fg)");
+    $("s-title").textContent = d ? d.title : "No path shown";
+    $("s-body").textContent = d ? d.body : "Pick one or more current paths above to see them flow on the board.";
+    const ch = $("s-chain"); ch.textContent = "";
+    (d ? d.chain : []).forEach(t => { const li = document.createElement("li"), b = document.createElement("b"); b.textContent = t; li.append(b); ch.append(li); });
+    const dl = $("s-stats"); dl.textContent = "";
+    (d ? d.stats : []).forEach(([k, v]) => { const dt = document.createElement("dt"), dd = document.createElement("dd"); dt.textContent = k; dd.textContent = v; dl.append(dt, dd); });
+    if (window.__ks3d) window.__ks3d.setPaths(STATE.on);
+  }
+  window.__ksRender = render;
+  render();
+})();
+
+// ------------------------------------------------------------------ 3D board
+(function () {
+const stage = document.getElementById("stage"), msg = document.getElementById("msg");
+if (!window.THREE || !THREE.OrbitControls) { msg.textContent = "The 3D library did not load. Check the connection and reload the page."; return; }
+const T = 1.6, DEG = Math.PI / 180;
+const V = (x, y, h = 0) => new THREE.Vector3(x - BW / 2, h, y - BH / 2);      // board coordinates (mm, y down) to the scene
+const L = (x, y, h = 0) => new THREE.Vector3(x, h, y);                        // inside a part: its own footprint frame
+const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const lin = hex => new THREE.Color(hex).convertSRGBToLinear();
+
+const scene = new THREE.Scene();
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.domElement.setAttribute("role", "img");
+renderer.domElement.setAttribute("aria-label", "3D model of the kill switch board with the selected current paths animated on its copper");
+stage.insertBefore(renderer.domElement, stage.firstChild);
+const camera = new THREE.PerspectiveCamera(32, 1, 5, 3000);
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; controls.autoRotateSpeed = 1.0; controls.target.set(0, 2, 0);
+
+scene.add(new THREE.HemisphereLight(0xffffff, 0x8a96a3, 0.55));
+const sun = new THREE.DirectionalLight(0xffffff, 0.95); sun.position.set(-50, 100, 60);
+sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left: -85, right: 85, top: 70, bottom: -70, near: 10, far: 320 }); sun.shadow.bias = -0.0005;
+scene.add(sun);
+const rim = new THREE.DirectionalLight(0xffffff, 0.35); rim.position.set(70, 45, -80); scene.add(rim);
+const under = new THREE.DirectionalLight(0xffffff, 0.5); under.position.set(20, -90, 35); scene.add(under);
+
+const mat = (c, o = {}) => new THREE.MeshStandardMaterial(Object.assign({ color: c, roughness: 0.55, metalness: 0.05 }, o));
+const M = {
+  lead: mat(0xc9ced4, { metalness: 0.85, roughness: 0.28 }), solder: mat(0xdfe3e7, { metalness: 0.9, roughness: 0.2 }),
+  gold: mat(0xd4a83a, { metalness: 0.9, roughness: 0.25 }), resBody: mat(0xe3c995), mfBody: mat(0x6fa8d6, { roughness: 0.45 }), r2w: mat(0x8fa0b3, { roughness: 0.5 }),
+  black: mat(0x1b1b1d, { roughness: 0.45 }), plastic: mat(0x232325, { roughness: 0.5 }), silver: mat(0xd5d9de, { metalness: 0.75, roughness: 0.3 }),
+  metal: mat(0xbfc5cc, { metalness: 0.85, roughness: 0.25 }), capSleeve: mat(0x1f3c63, { roughness: 0.35 }), capStripe: mat(0xbfcbda, { roughness: 0.4 }),
+  cer: mat(0xe89b2d, { roughness: 0.6 }), cerBlue: mat(0x2f6fb5, { roughness: 0.5 }), glass: mat(0xd9541e, { transparent: true, opacity: 0.9, roughness: 0.15 }),
+  xt60: mat(0xf2c400, { roughness: 0.45 }), jst: mat(0xefe7d3, { roughness: 0.6 }), film: mat(0xc0392b, { roughness: 0.45 }), ptc: mat(0xf0b33c, { roughness: 0.5 }),
+  nylon: mat(0xf3f0e6, { roughness: 0.6 }), dark: mat(0x0b0b0c), fr4: mat(0xc7b56e, { roughness: 0.7 }), sock: mat(0x2c2c30, { roughness: 0.6 }),
+  copper: mat(0xc8773e, { metalness: 0.85, roughness: 0.32 })
+};
+function add(o, g) { o.castShadow = true; o.receiveShadow = true; g.add(o); return o; }
+function seg(g, a, b, r, m, sides = 12) {
+  const d = new THREE.Vector3().subVectors(b, a), len = d.length(); if (len < 1e-6) return null;
+  const mesh = new THREE.Mesh(new THREE.CylinderGeometry(r, r, len, sides), m);
+  mesh.position.copy(a).addScaledVector(d, 0.5); mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize());
+  return add(mesh, g);
+}
+function boxL(g, x0, y0, x1, y1, h0, h1, m) {
+  const b = new THREE.Mesh(new THREE.BoxGeometry(Math.abs(x1 - x0), Math.abs(h1 - h0), Math.abs(y1 - y0)), m);
+  b.position.set((x0 + x1) / 2, (h0 + h1) / 2, (y0 + y1) / 2); return add(b, g);
+}
+function cylV(g, x, y, r, h0, h1, m, sg = 32) { const c = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h1 - h0, sg), m); c.position.set(x, (h0 + h1) / 2, y); return add(c, g); }
+function fillet(g, x, y, r) { const f = new THREE.Mesh(new THREE.ConeGeometry(r, 0.9, 16), M.solder); f.rotation.x = Math.PI; f.position.set(x, -T - 0.45, y); return add(f, g); }
+function lead(g, x, y, h, r = 0.3) { seg(g, L(x, y, -T - 1.2), L(x, y, h), r, M.lead, 10); fillet(g, x, y, Math.max(0.85, r * 3)); }
+function extrudeL(g, pts, h0, h1, m) {
+  const s = new THREE.Shape(pts.map(([x, y]) => new THREE.Vector2(x, -y)));
+  const geo = new THREE.ExtrudeGeometry(s, { depth: h1 - h0, bevelEnabled: false, curveSegments: 24 });
+  geo.rotateX(-Math.PI / 2); geo.translate(0, h0, 0);
+  return add(new THREE.Mesh(geo, m), g);
+}
+function canvasTex(w, h, draw) {
+  const c = document.createElement("canvas"); c.width = w; c.height = h; draw(c.getContext("2d"), w, h);
+  const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; t.anisotropy = 8; return t;
+}
+function plate(g, w, h, tex, x, y, z, ry = 0, rx = 0) {
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.5 }));
+  m.position.set(x, z, y); m.rotation.order = "YXZ"; m.rotation.y = ry; m.rotation.x = rx; g.add(m); return m;
+}
+function textTex(lines, bg, fg, w = 256, h = 160) {
+  return canvasTex(w, h, (c, W, H) => {
+    c.fillStyle = bg; c.fillRect(0, 0, W, H); c.fillStyle = fg; c.textAlign = "center"; c.textBaseline = "middle";
+    const n = lines.length; lines.forEach(([t, px, wt], i) => { c.font = `${wt || 700} ${px}px monospace`; c.fillText(t, W / 2, H * (i + 0.5) / n + (n === 1 ? 0 : (i - (n - 1) / 2) * -2)); });
+  });
+}
+
+// ---------------------------------------------------------------- board and wires
+let needRender = true;
+const loader = new THREE.TextureLoader();
+function boardTex(url, flip) { const t = loader.load(url, () => { needRender = true; }); t.encoding = THREE.sRGBEncoding; t.flipY = flip; t.anisotropy = renderer.capabilities.getMaxAnisotropy(); return t; }
+const core = add(new THREE.Mesh(new THREE.BoxGeometry(BW, T - 0.04, BH), M.fr4), scene); core.position.y = -T / 2;
+const top = add(new THREE.Mesh(new THREE.PlaneGeometry(BW, BH), mat(0xffffff, { map: boardTex("tex_top.jpg", true), roughness: 0.5 })), scene);
+top.rotation.x = -Math.PI / 2; top.position.y = 0.005;
+const bot = add(new THREE.Mesh(new THREE.PlaneGeometry(BW, BH), mat(0xffffff, { map: boardTex("tex_bot.jpg", false), roughness: 0.5 })), scene);
+bot.rotation.x = Math.PI / 2; bot.position.y = -T - 0.005;
+
+const WR = 1.03, WH = 0.3 + WR;                                   // 12 AWG: 2.05 mm, on a bed of solder
+const wireGroup = new THREE.Group(); scene.add(wireGroup);
+for (const [l, x0, y0, x1, y1] of WIRES) {
+  const h = l === 0 ? WH : -T - WH, hs = l === 0 ? 0.2 : -T - 0.2, horiz = Math.abs(x1 - x0) >= Math.abs(y1 - y0), len = Math.hypot(x1 - x0, y1 - y0);
+  seg(wireGroup, V(x0, y0, h), V(x1, y1, h), WR, M.copper, 18);
+  [[x0, y0], [x1, y1]].forEach(([x, y]) => { const s = new THREE.Mesh(new THREE.SphereGeometry(WR, 18, 12), M.copper); s.position.copy(V(x, y, h)); add(s, wireGroup); });
+  const sb = new THREE.Mesh(new THREE.BoxGeometry(horiz ? len + 0.6 : 1.45, 0.42, horiz ? 1.45 : len + 0.6), M.solder);
+  sb.position.copy(V((x0 + x1) / 2, (y0 + y1) / 2, hs)); add(sb, wireGroup);
+}
+wireGroup.traverse(o => { o.userData.ref = "WIRE"; });
+
+// ---------------------------------------------------------------- parts, each built in its own footprint frame
+const pads = p => { const o = {}; for (const q of p.pads) if (q[0] && !o[q[0]]) o[q[0]] = q; return o; };
+function axDims(fp) {
+  const m = fp.match(/_L([\d.]+)mm_D([\d.]+)mm/); if (m) return [+m[1], +m[2] / 2];
+  if (/DO-201/.test(fp)) return [9.0, 2.65]; if (/DO-15/.test(fp)) return [7.6, 1.8]; if (/DO-41/.test(fp)) return [5.2, 1.35]; if (/DO-35/.test(fp)) return [3.8, 0.95];
+  return [6, 1.2];
+}
+const CC = [0x111111, 0x7b3f00, 0xe03131, 0xf76707, 0xfab005, 0x2f9e44, 0x1c64d1, 0x7048e8, 0x8a8f95, 0xf1f3f5], GOLD = 0xc9a227;
+const bandMat = {}; const bm = c => bandMat[c] || (bandMat[c] = mat(c));
+function codes(val) {                                    // colour bands: digits then multiplier; 1 % parts get three digits
+  const m = String(val).match(/^([\d.]+)\s*([kKM]?)/); if (!m) return null;
+  const ohm = +m[1] * (m[2] === "M" ? 1e6 : /k/i.test(m[2]) ? 1e3 : 1), prec = /1\s*%/.test(val);
+  if (ohm === 0) return { zero: true, bands: [] };
+  const nd = prec ? 3 : 2, e = Math.floor(Math.log10(ohm) + 1e-9) - (nd - 1), digits = Math.round(ohm / Math.pow(10, e));
+  return { prec, bands: String(digits).padStart(nd, "0").split("").map(Number).concat([e]) };
+}
+function axialH(g, p) {
+  const P = pads(p), a = P["1"], b = P["2"], [Lb, R] = axDims(p.fp), isR = /^R/.test(p.ref), big = /DIN0414/.test(p.fp);
+  const h = R + (big ? 1.6 : 0.25), lr = R > 2 ? 0.42 : 0.3, xa = a[1], xb = b[1], xm = (xa + xb) / 2, e1 = xm - Lb / 2, e2 = xm + Lb / 2;
+  lead(g, xa, 0, h, lr); lead(g, xb, 0, h, lr);
+  seg(g, L(xa, 0, h), L(e1, 0, h), lr, M.lead); seg(g, L(e2, 0, h), L(xb, 0, h), lr, M.lead);
+  const band = (x, r, hw, c) => seg(g, L(x - hw, 0, h), L(x + hw, 0, h), r, bm(c), 18);
+  if (!isR) { seg(g, L(e1, 0, h), L(e2, 0, h), R, M.black, 18); band(e1 + Lb * 0.16, R + 0.04, Lb * 0.06, 0xc8ccd0); return; }   // cathode band at pad 1
+  const c = codes(p.val), body = big ? M.r2w : (c && c.prec ? M.mfBody : M.resBody);
+  seg(g, L(e1, 0, h), L(e2, 0, h), R, body, 18);
+  if (c && c.zero) { band(xm, R + 0.05, 0.5, CC[0]); return; }
+  seg(g, L(e1 - 0.2, 0, h), L(e1 + Lb * 0.14, 0, h), R + 0.12, body, 18); seg(g, L(e2 - Lb * 0.14, 0, h), L(e2 + 0.2, 0, h), R + 0.12, body, 18);
+  if (c) { const n = c.bands.length; c.bands.forEach((k, i) => band(e1 + Lb * (0.22 + i * 0.48 / n), R + 0.05, Lb * 0.05, CC[Math.max(0, k)])); band(e1 + Lb * 0.84, R + 0.14, Lb * 0.045, c.prec ? CC[1] : GOLD); }
+}
+function axialV(g, p, diode) {                            // standing resistor (body on pad 1) or DO-35 "KathodeUp" diode (body on pad 2)
+  const P = pads(p), a = P["1"], b = P["2"], [Lb, R] = axDims(p.fp), base = diode ? b : a, other = diode ? a : b;
+  const h0 = 0.9, h1 = h0 + Lb, topH = h1 + 1.2, bx = base[1], ox = other[1], s = Math.sign(ox - bx) || 1, k = 0.6;
+  lead(g, bx, 0, h0 + 0.2, 0.28);
+  if (diode) { seg(g, L(bx, 0, h0), L(bx, 0, h1), R, M.glass, 16); seg(g, L(bx, 0, h1 - 0.7), L(bx, 0, h1 - 0.12), R + 0.03, M.dark, 16); }
+  else {
+    const c = codes(p.val), body = c && c.prec ? M.mfBody : M.resBody;
+    seg(g, L(bx, 0, h0), L(bx, 0, h1), R, body, 16);
+    seg(g, L(bx, 0, h0 - 0.1), L(bx, 0, h0 + Lb * 0.14), R + 0.12, body, 16); seg(g, L(bx, 0, h1 - Lb * 0.14), L(bx, 0, h1 + 0.1), R + 0.12, body, 16);
+    if (c && !c.zero) {
+      const n = c.bands.length, ring = (z, r, hw, col) => seg(g, L(bx, 0, z - hw), L(bx, 0, z + hw), r, bm(col), 16);
+      c.bands.forEach((q, i) => ring(h1 - Lb * (0.22 + i * 0.48 / n), R + 0.05, Lb * 0.05, CC[Math.max(0, q)]));
+      ring(h1 - Lb * 0.84, R + 0.14, Lb * 0.045, c.prec ? CC[1] : GOLD);
+    }
+  }
+  seg(g, L(bx, 0, h1), L(bx, 0, topH - k), 0.28, M.lead); seg(g, L(bx, 0, topH - k), L(bx + s * k, 0, topH), 0.28, M.lead);
+  seg(g, L(bx + s * k, 0, topH), L(ox - s * k, 0, topH), 0.28, M.lead); seg(g, L(ox - s * k, 0, topH), L(ox, 0, topH - k), 0.28, M.lead);
+  lead(g, ox, 0, topH - k, 0.28);
+}
+function to220V(g, p) {                                   // standing TO-220: metal tab toward -y, as in the footprint
+  const P = pads(p), hs = 3.0, hp = hs + 9.1, ht = hs + 15.6;
+  ["1", "2", "3"].forEach(k => { const x = P[k][1]; boxL(g, x - 0.4, -0.25, x + 0.4, 0.25, -T - 1.2, hs + 0.5, M.lead); fillet(g, x, 0, 1.05); });
+  boxL(g, -2.46, -1.88, 7.54, 1.25, hs, hp, M.plastic);
+  boxL(g, -2.46, -3.15, 7.54, -1.88, hs, ht, M.metal);
+  const hole = new THREE.Mesh(new THREE.CylinderGeometry(1.85, 1.85, 1.45, 24), M.dark); hole.rotation.x = Math.PI / 2; hole.position.set(2.54, ht - 2.8, -2.515); g.add(hole);
+  plate(g, 9.2, 5.75, textTex([[p.val, 40], [p.ref, 30, 400]], "#232325", "#d6d9dc"), 2.54, 1.27, hs + 4.7);
+}
+function to220H(g, p) {                                   // TO-220 lying flat, tab down, screwed to the board
+  const P = pads(p), hl = 2.3;
+  ["1", "2", "3"].forEach(k => { const x = P[k][1]; seg(g, L(x, 0, -T - 1.2), L(x, 0, hl), 0.32, M.lead); fillet(g, x, 0, 1.05); seg(g, L(x, 0, hl), L(x, -4.2, hl), 0.32, M.lead); });
+  boxL(g, -2.46, -19.46, 7.54, -3.81, 0.02, 1.32, M.metal);
+  boxL(g, -2.46, -13.06, 7.54, -3.81, 1.32, 4.5, M.plastic);
+  cylV(g, 2.54, -16.66, 2.7, 1.32, 2.9, M.silver, 24); boxL(g, 1.3, -16.91, 3.78, -16.41, 2.9, 2.96, M.dark);
+  cylV(g, 2.54, -16.66, 2.9, -T - 2.4, -T, M.silver, 6);
+  plate(g, 9.6, 8.8, textTex([[p.val, 44], [p.ref, 34, 400]], "#232325", "#d6d9dc", 256, 236), 2.54, -8.43, 4.51, 0, -Math.PI / 2);
+}
+function to92(g, p) {                                     // flat face toward +y, round side toward -y, as in the footprint
+  const P = pads(p), xc = P["2"][1], hb0 = 3.3, hb1 = hb0 + 4.7, r = 2.45, yf = 1.7;
+  ["1", "2", "3"].forEach(k => { const x = P[k][1]; seg(g, L(x, 0, -T - 1.2), L(x, 0, 2.2), 0.24, M.lead); fillet(g, x, 0, 0.9); seg(g, L(x, 0, 2.2), L(xc + (x - xc) * 0.5, 0, hb0 + 0.2), 0.24, M.lead); });
+  const a0 = Math.asin(yf / r), pts = [];
+  for (let i = 0; i <= 28; i++) { const a = Math.PI - a0 + i / 28 * (Math.PI + 2 * a0); pts.push([xc + r * Math.cos(a), r * Math.sin(a)]); }
+  extrudeL(g, pts, hb0, hb1, M.plastic);
+  plate(g, 3.4, 4.3, textTex([[p.val, 34], [p.ref, 34, 400]], "#232325", "#d6d9dc", 200, 252), xc, yf + 0.02, (hb0 + hb1) / 2);
+}
+function dip(g, p, socket) {
+  const f = p.fab, hs = socket ? 3.1 : 0, hb0 = hs + 0.6, hb1 = hb0 + 3.4;
+  if (socket) boxL(g, -1.0, f[1] - 0.8, 8.62, f[3] + 0.8, 0, hs, M.sock);
+  for (const q of p.pads) { if (!q[0]) continue; const x = q[1], y = q[2], xe = x < 3.8 ? f[0] : f[2];
+    lead(g, x, y, hb0 + 0.9, 0.24); boxL(g, Math.min(x, xe) - 0.1, y - 0.25, Math.max(x, xe), y + 0.25, hb0 + 0.6, hb0 + 1.0, M.lead); }
+  boxL(g, f[0], f[1], f[2], f[3], hb0, hb1, M.plastic);
+  const along = (f[3] - f[1]) > (f[2] - f[0]) * 1.5, lw = along ? f[3] - f[1] : f[2] - f[0], lh = along ? f[2] - f[0] : f[3] - f[1];
+  const name = /LM339/.test(p.val) ? "LM339N" : "PC817";
+  const tex = canvasTex(512, Math.round(512 * lh / lw), (c, W, H) => {
+    c.fillStyle = "#2a2a2d"; c.fillRect(0, 0, W, H); c.fillStyle = "#121214";
+    if (along) { c.beginPath(); c.arc(0, H / 2, H * 0.16, -Math.PI / 2, Math.PI / 2); c.fill(); }   // notch at the pin 1 end
+    c.fillStyle = "#9aa0a6"; c.beginPath(); c.arc(along ? W * 0.07 : W * 0.12, along ? H * 0.8 : H * 0.22, H * 0.07, 0, 7); c.fill();
+    c.fillStyle = "#e3e6e9"; c.textAlign = "center"; c.textBaseline = "middle"; c.font = `700 ${Math.round(H * (along ? 0.34 : 0.3))}px monospace`;
+    c.fillText(name, W / 2, H * (along ? 0.42 : 0.5)); c.font = `${Math.round(H * (along ? 0.22 : 0.2))}px monospace`; c.fillText(p.ref, W / 2, H * (along ? 0.75 : 0.8));
+  });
+  plate(g, lw, lh, tex, (f[0] + f[2]) / 2, (f[1] + f[3]) / 2, hb1 + 0.01, along ? -Math.PI / 2 : 0, -Math.PI / 2);
+}
+function cpRadial(g, p) {
+  const P = pads(p), a = P["1"], b = P["2"], D = +((p.fp.match(/_D([\d.]+)mm/) || [0, 5])[1]), r = D / 2, xc = (a[1] + b[1]) / 2, h0 = 0.4, h1 = 11.4;
+  lead(g, a[1], 0, h0); lead(g, b[1], 0, h0);
+  cylV(g, xc, 0, r, h0, h1, M.capSleeve, 40);
+  const st = new THREE.Mesh(new THREE.CylinderGeometry(r + 0.02, r + 0.02, h1 - h0 - 0.3, 40, 1, true, Math.PI / 2 - 0.6, 1.2), M.capStripe);   // stripe toward the minus pad
+  st.position.set(xc, (h0 + h1) / 2, 0); add(st, g);
+  cylV(g, xc, 0, r - 0.4, h1, h1 + 0.08, M.silver, 40);
+  boxL(g, xc - r * 0.6, -0.15, xc + r * 0.6, 0.15, h1 + 0.08, h1 + 0.14, M.dark); boxL(g, xc - 0.15, -r * 0.6, xc + 0.15, r * 0.6, h1 + 0.08, h1 + 0.14, M.dark);
+}
+function cDisc(g, p) {
+  const P = pads(p), a = P["1"], b = P["2"], xm = (a[1] + b[1]) / 2, hc = 5.2;
+  lead(g, a[1], 0, 2.4, 0.28); lead(g, b[1], 0, 2.4, 0.28);
+  seg(g, L(a[1], 0, 2.4), L(xm - 1.2, 0, hc - 1.7), 0.28, M.lead); seg(g, L(b[1], 0, 2.4), L(xm + 1.2, 0, hc - 1.7), 0.28, M.lead);
+  const d = new THREE.Mesh(new THREE.CylinderGeometry(2.5, 2.5, 2.2, 32), /u/.test(p.val) ? M.cerBlue : M.cer); d.rotation.x = Math.PI / 2; d.position.set(xm, hc, 0); add(d, g);
+}
+function cFilm(g, p) {
+  const P = pads(p), f = p.fab; lead(g, P["1"][1], 0, 0.5); lead(g, P["2"][1], 0, 0.5);
+  boxL(g, f[0], f[1], f[2], f[3], 0.5, 9.0, M.film);
+  plate(g, f[2] - f[0] - 0.4, 7.6, textTex([["MKS2", 40], ["0.22µ", 40], ["100-", 34, 400]], "#c0392b", "#f8e9e6", 220, 232), (f[0] + f[2]) / 2, f[3] + 0.01, 4.8);
+}
+const LEDM = {};
+function led3(g, p) {
+  const P = pads(p), k = P["1"], a = P["2"], h = 2.6, xc = (k[1] + a[1]) / 2;
+  const col = /blue/i.test(p.val) ? 0x3d8bff : /green/i.test(p.val) ? 0x2fbf55 : 0xff3030;
+  const m = mat(col, { transparent: true, opacity: 0.86, roughness: 0.15, emissive: col, emissiveIntensity: 0 }); LEDM[p.ref] = m;
+  lead(g, k[1], 0, h, 0.26); lead(g, a[1], 0, h, 0.26);
+  cylV(g, xc, 0, 1.9, h, h + 0.8, m); cylV(g, xc, 0, 1.5, h + 0.8, h + 4.0, m);
+  const d = new THREE.Mesh(new THREE.SphereGeometry(1.5, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2), m); d.position.set(xc, h + 4.0, 0); add(d, g);
+}
+function ptc(g, p) {
+  const P = pads(p), a = P["1"], b = P["2"], xc = (a[1] + b[1]) / 2, yc = (a[2] + b[2]) / 2;
+  lead(g, a[1], a[2], 2.0); lead(g, b[1], b[2], 2.0);
+  seg(g, L(a[1], a[2], 2.0), L(xc - 1.6, yc, 3.0), 0.3, M.lead); seg(g, L(b[1], b[2], 2.0), L(xc + 1.6, yc, 3.0), 0.3, M.lead);
+  boxL(g, xc - 3.7, yc - 1.5, xc + 3.7, yc + 1.5, 2.8, 13.2, M.ptc);
+  const tex = textTex([["RXEF", 52], ["050", 52]], "#f0b33c", "#3a2a00", 220, 300);
+  plate(g, 7.0, 9.6, tex, xc, yc + 1.51, 8.0); plate(g, 7.0, 9.6, tex, xc, yc - 1.51, 8.0, Math.PI);
+}
+function xt60(g, p) {                                     // housing from the F.Fab outline; mating face at the -y end
+  const f = p.fab, P = pads(p), minus = P["1"], plus = P["2"], fem = /PW-F/.test(p.fp), hb = 8.0, hc = 4.0;
+  [minus, plus].forEach(q => { seg(g, L(q[1], 0, -T - 1.7), L(q[1], 0, 1.0), 1.25, M.gold, 16); fillet(g, q[1], 0, 2.1); });
+  boxL(g, f[0], -7.65, f[2], f[3] - 0.25, 0, hb, M.xt60);
+  if (fem) boxL(g, f[0] + 0.85, f[1], f[2] - 0.85, -7.65, 0.3, hb - 0.3, M.xt60); else boxL(g, f[0], f[1], f[2], -7.65, 0, hb, M.xt60);
+  [minus, plus].forEach(q => {
+    const ring = new THREE.Mesh(new THREE.CylinderGeometry(fem ? 2.1 : 2.7, fem ? 2.1 : 2.7, 0.8, 24), M.dark); ring.rotation.x = Math.PI / 2; ring.position.set(q[1], hc, f[1] - 0.38); g.add(ring);
+    const pin = new THREE.Mesh(new THREE.CylinderGeometry(fem ? 1.3 : 1.75, fem ? 1.3 : 1.75, fem ? 0.9 : 1.5, 20), M.gold); pin.rotation.x = Math.PI / 2; pin.position.set(q[1], hc, f[1] - (fem ? 0.4 : 0.7)); g.add(pin);
+  });
+  const w = f[2] - f[0], d = f[3] - f[1];
+  const tex = canvasTex(512, Math.round(512 * d / w), (c, W, H) => {
+    c.fillStyle = "#f2c400"; c.fillRect(0, 0, W, H); c.fillStyle = "#5b4a00"; c.textAlign = "center"; c.textBaseline = "middle";
+    const X = x => (x - f[0]) / w * W; c.font = "900 150px Arial, sans-serif"; c.fillText("+", X(plus[1]), H * 0.55); c.fillRect(X(minus[1]) - 36, H * 0.55 - 12, 72, 24);
+    c.font = "700 64px Arial, sans-serif"; c.fillText(fem ? "ESC" : "BATT", W / 2, H * 0.86);
+  });
+  plate(g, w, d, tex, (f[0] + f[2]) / 2, (f[1] + f[3]) / 2, hb + 0.01, 0, -Math.PI / 2);
+}
+function jst(g, p) {
+  const f = p.fab, hh = 7.0;
+  boxL(g, f[0], f[1], f[2], f[3], 0, hh, M.jst);
+  boxL(g, f[0] + 0.7, f[1] + 0.9, f[2] - 0.7, f[3] - 1.1, hh - 0.05, hh + 0.03, M.dark);
+  for (const q of p.pads) { boxL(g, q[1] - 0.32, q[2] - 0.32, q[1] + 0.32, q[2] + 0.32, -T - 1.2, hh + 0.12, M.gold); fillet(g, q[1], q[2], 0.9); }
+}
+function sip(g, p) {                                      // B0512S module on a 4-pin row along y
+  const ys = p.pads.map(q => q[2]), yc = (Math.min(...ys) + Math.max(...ys)) / 2, h0 = 0.6, h1 = h0 + 10.16;
+  for (const q of p.pads) lead(g, q[1], q[2], h0 + 0.2, 0.28);
+  boxL(g, -3.0, yc - 5.8, 3.0, yc + 5.8, h0, h1, M.plastic);
+  plate(g, 11.2, 9.6, textTex([["MORNSUN", 40, 400], ["B0512S-1WR3", 40], ["5V→12V iso", 32, 400], [p.ref, 32, 400]], "#232325", "#e8eaec", 300, 258), 3.01, yc, (h0 + h1) / 2, Math.PI / 2);
+  plate(g, 11.2, 9.6, textTex([["MORNSUN", 40, 400], ["B0512S-1WR3", 40], [p.ref, 32, 400]], "#232325", "#e8eaec", 300, 258), -3.01, yc, (h0 + h1) / 2, -Math.PI / 2);
+}
+function tpost(g) { cylV(g, 0, 0, 0.42, -T - 1.0, 2.6, M.silver, 12); const s = new THREE.Mesh(new THREE.TorusGeometry(0.9, 0.22, 8, 20), M.silver); s.position.set(0, 3.4, 0); add(s, g); fillet(g, 0, 0, 0.9); }
+function mhole(g) { cylV(g, 0, 0, 2.8, 0, 2.0, M.nylon, 32); boxL(g, -2.0, -0.3, 2.0, 0.3, 2.0, 2.06, M.dark); cylV(g, 0, 0, 3.0, -T - 8.0, -T, M.nylon, 6); }
+
+const partsRoot = new THREE.Group(); scene.add(partsRoot);
+const groupOf = {};
+for (const p of PARTS) {
+  const g = new THREE.Group(); g.position.copy(V(p.x, p.y, 0)); g.rotation.y = p.rot * DEG; partsRoot.add(g); groupOf[p.ref] = g;
+  const f = p.fp;
+  if (/^D_DO-35.*Vertical/.test(f)) axialV(g, p, true);
+  else if (/^R_Axial.*Vertical/.test(f)) axialV(g, p, false);
+  else if (/^R_Axial|^D_DO-/.test(f)) axialH(g, p);
+  else if (/^TO-220-3_Vertical/.test(f)) to220V(g, p);
+  else if (/^TO-220-3_Horizontal/.test(f)) to220H(g, p);
+  else if (/^TO-92/.test(f)) to92(g, p);
+  else if (/^DIP-/.test(f)) dip(g, p, /DIP-14/.test(f));
+  else if (/^CP_Radial/.test(f)) cpRadial(g, p);
+  else if (/^C_Disc/.test(f)) cDisc(g, p);
+  else if (/^C_Rect/.test(f)) cFilm(g, p);
+  else if (/^LED_/.test(f)) led3(g, p);
+  else if (/^Fuse_/.test(f)) ptc(g, p);
+  else if (/^AMASS_XT60/.test(f)) xt60(g, p);
+  else if (/^JST_XH/.test(f)) jst(g, p);
+  else if (/^PinHeader_1x04/.test(f)) sip(g, p);
+  else if (/^TestPoint/.test(f)) tpost(g);
+  else if (/^MountingHole/.test(f)) mhole(g);
+  g.traverse(o => { o.userData.ref = p.ref; });
+}
+scene.updateMatrixWorld(true);
+function refsBox(refs) {
+  const b = new THREE.Box3();
+  refs.forEach(r => { if (r === "WIRE") b.expandByObject(wireGroup); else if (groupOf[r]) b.expandByObject(groupOf[r]); });
+  return b;
+}
+function outline(refs, color, fill) {                     // edges (always on top) and a faint fill around each part
+  const g = new THREE.Group();
+  refs.forEach(r => {
+    const b = refsBox([r]); if (b.isEmpty()) return;
+    if (r !== "WIRE") { b.min.y = Math.max(b.min.y, 0.02); }
+    const s = new THREE.Vector3(), c = new THREE.Vector3(); b.getSize(s); b.getCenter(c); s.addScalar(0.9);
+    const e = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(s.x, s.y, s.z)), new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.95, depthTest: false }));
+    e.position.copy(c); e.renderOrder = 60; g.add(e);
+    if (fill) { const m = new THREE.Mesh(new THREE.BoxGeometry(s.x, s.y, s.z), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: fill, depthWrite: false })); m.position.copy(c); m.renderOrder = 59; g.add(m); }
+  });
+  return g;
+}
+
+// ---------------------------------------------------------------- current paths: animated ribbons on the copper
+function stripeTex(kind) {
+  const c = document.createElement("canvas"); c.width = 64; c.height = 32; const x = c.getContext("2d");
+  if (kind === "chev") { x.fillStyle = "rgba(255,255,255,0.42)"; x.fillRect(0, 7, 64, 18); x.strokeStyle = "#fff"; x.lineWidth = 7; x.beginPath(); x.moveTo(20, 3); x.lineTo(42, 16); x.lineTo(20, 29); x.stroke(); }
+  else if (kind === "dash") { x.fillStyle = "rgba(255,255,255,0.3)"; x.fillRect(0, 9, 64, 14); x.fillStyle = "#fff"; x.fillRect(6, 4, 30, 24); }
+  else { x.fillStyle = "#fff"; x.beginPath(); x.arc(32, 16, 10, 0, 7); x.fill(); }
+  const t = new THREE.CanvasTexture(c); t.wrapS = THREE.RepeatWrapping; t.wrapT = THREE.ClampToEdgeWrapping; t.anisotropy = 4; return t;
+}
+const TEX = { chev: stripeTex("chev"), dash: stripeTex("dash"), dot: stripeTex("dot") };
+const STY = { main: { w: 2.6, per: 6, sp: 1.5, tex: "chev" }, ret: { w: 2.6, per: 6, sp: 1.5, tex: "chev" }, sig: { w: 1.05, per: 3.2, sp: 1.4, tex: "chev" }, ctl: { w: 0.55, per: 2.2, sp: 1.0, tex: "dash" } };
+function ribbonGeo(pts, w, h, per) {
+  const P = [];
+  for (const p of pts) if (!P.length || Math.hypot(p[0] - P[P.length - 1][0], p[1] - P[P.length - 1][1]) > 1e-3) P.push(p);
+  if (P.length < 2) return null;
+  const pos = [], uv = [], idx = [], unit = (a, b) => { const dx = a[0] - b[0], dy = a[1] - b[1], l = Math.hypot(dx, dy); return [dx / l, dy / l]; };
+  let acc = 0;
+  for (let i = 0; i < P.length; i++) {
+    const p = P[i]; if (i) acc += Math.hypot(p[0] - P[i - 1][0], p[1] - P[i - 1][1]);
+    const din = i ? unit(p, P[i - 1]) : null, dout = i < P.length - 1 ? unit(P[i + 1], p) : null;
+    let t = din && dout ? [din[0] + dout[0], din[1] + dout[1]] : (din || dout); const tl = Math.hypot(t[0], t[1]);
+    t = tl < 1e-6 ? din : [t[0] / tl, t[1] / tl];
+    const n = [-t[1], t[0]]; let ml = w / 2;
+    if (din && dout) { const c = n[0] * -din[1] + n[1] * din[0]; ml = w / 2 / Math.max(c, 0.45); }
+    const a = V(p[0] + n[0] * ml, p[1] + n[1] * ml, h), b = V(p[0] - n[0] * ml, p[1] - n[1] * ml, h);
+    pos.push(a.x, a.y, a.z, b.x, b.y, b.z); uv.push(acc / per, 1, acc / per, 0);
+    if (i) { const k = 2 * (i - 1); idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2); }
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2)); geo.setIndex(idx);
+  return geo;
+}
+let labelSprites = [];
+function labelSprite(text, color) {
+  const fs = 30, c = document.createElement("canvas"), x = c.getContext("2d"); x.font = `600 ${fs}px system-ui, sans-serif`;
+  const tw = Math.ceil(x.measureText(text).width); c.width = tw + 40; c.height = fs + 22;
+  x.font = `600 ${fs}px system-ui, sans-serif`; x.fillStyle = "rgba(12,18,24,0.86)";
+  const r = 10, W = c.width, H = c.height; x.beginPath(); x.moveTo(r, 0); x.arcTo(W, 0, W, H, r); x.arcTo(W, H, 0, H, r); x.arcTo(0, H, 0, 0, r); x.arcTo(0, 0, W, 0, r); x.fill();
+  x.fillStyle = color; x.fillRect(8, 9, 6, H - 18); x.fillStyle = "#ffffff"; x.textBaseline = "middle"; x.fillText(text, 24, H / 2 + 1);
+  const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; t.minFilter = THREE.LinearFilter;
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, depthTest: false, depthWrite: false, transparent: true, sizeAttenuation: false }));
+  s.center.set(0.5, 0); s.renderOrder = 1000; s.userData.aspect = W / H; labelSprites.push(s); return s;
+}
+const PV = {};
+PDEF.forEach((d, i) => {
+  const data = PATHS[d.id]; if (!data) return;
+  const g = new THREE.Group(); g.visible = false; scene.add(g);
+  const mats = [], cache = {};
+  const matFor = (st, ghost) => {
+    const key = st + (ghost ? "g" : ""); if (cache[key]) return cache[key];
+    const t = TEX[ghost ? "dot" : STY[st].tex].clone(); t.needsUpdate = true;
+    const m = new THREE.MeshBasicMaterial({ color: lin(st === "ret" ? (d.ret || d.color) : d.color), map: t, transparent: true, opacity: ghost ? 0.55 : 1, depthWrite: false, side: THREE.DoubleSide });
+    mats.push([m, STY[st].sp]); return (cache[key] = m);
+  };
+  const dz = 0.016 * i, thru = new Set();
+  for (const ln of data.lines) {
+    const st = STY[ln.s], onTop = ln.l === 0, w = ln.wire ? Math.min(st.w, 1.7) : st.w;
+    const h = ln.wire ? (onTop ? 2 * WH - 0.25 + dz : -T - 2 * WH + 0.25 - dz) : (onTop ? 0.07 + dz : -T - 0.07 - dz);
+    const geo = ribbonGeo(ln.p, w, h, st.per);
+    if (geo) { const m = new THREE.Mesh(geo, matFor(ln.s, false)); m.renderOrder = 20 + i; g.add(m); }
+    const geo2 = ribbonGeo(ln.p, Math.max(w * 0.55, 0.5), onTop ? -T - 0.06 - dz : 0.06 + dz, st.per * 0.6);
+    if (geo2) { const m = new THREE.Mesh(geo2, matFor(ln.s, true)); m.renderOrder = 10 + i; g.add(m); }
+    if (ln.thru) thru.add(ln.thru);
+  }
+  const vm = new THREE.MeshBasicMaterial({ color: lin(d.color), transparent: true, opacity: 0.95, depthWrite: false, side: THREE.DoubleSide });
+  for (const [x, y] of data.vias) [0.08 + dz, -T - 0.08 - dz].forEach(h => { const c = new THREE.Mesh(new THREE.RingGeometry(0.35, 0.8, 20), vm); c.rotation.x = -Math.PI / 2; c.position.copy(V(x, y, h)); c.renderOrder = 30; g.add(c); });
+  g.add(outline([...thru], lin(d.color), 0.14));
+  d.labels.forEach(([at, text]) => {
+    const s = labelSprite(text, d.color);
+    if (Array.isArray(at) && typeof at[0] === "number") s.position.copy(V(at[0], at[1], at[2]));
+    else { const b = refsBox(Array.isArray(at) ? at : [at]), c = new THREE.Vector3(); b.getCenter(c); s.position.set(c.x, b.max.y + 2.5, c.z); }
+    g.add(s);
+  });
+  PV[d.id] = { g, mats };
+});
+const LIT = { arm: ["D7", "D8"], seq: ["D9"], gate: ["D9"], main: ["D7", "D8", "D9"] };
+function setPaths(on) {
+  for (const id in PV) PV[id].g.visible = on.has(id);
+  const lit = new Set(); on.forEach(id => (LIT[id] || []).forEach(r => lit.add(r)));
+  for (const r in LEDM) LEDM[r].emissiveIntensity = lit.has(r) ? 1.1 : 0;
+  needRender = true;
+}
+
+// ---------------------------------------------------------------- tapping a part
+const ARTICLE = {};
+document.querySelectorAll("article.part[data-refs]").forEach(a => a.dataset.refs.split(/\s+/).forEach(r => { ARTICLE[r] = a; }));
+const tip = document.getElementById("tip"), sel = new THREE.Group(); scene.add(sel);
+function select(refs, fromBoard) {
+  sel.clear(); sel.add(outline(refs, 0xffffff, 0.06)); needRender = true;
+  const art = ARTICLE[refs[0]], val = (PARTS.find(p => p.ref === refs[0]) || {}).val;
+  document.getElementById("tip-ref").textContent = refs.length > 1 ? art.querySelector(".ref").textContent : refs[0] + (val && refs[0] !== "WIRE" ? " · " + val : "");
+  document.getElementById("tip-pn").textContent = art ? art.querySelector(".pn").textContent : "";
+  document.getElementById("tip-job").textContent = art ? art.querySelector("dd").textContent : "";
+  const more = document.getElementById("tip-more"); more.href = art ? "#" + art.id : "#explain";
+  tip.hidden = false;
+  if (!fromBoard) {
+    const b = refsBox(refs), c = new THREE.Vector3(); b.getCenter(c); c.y = Math.max(c.y, 2);
+    const off = new THREE.Vector3().subVectors(camera.position, controls.target); controls.target.copy(c); camera.position.copy(c).add(off); controls.update();
+  }
+}
+document.getElementById("tip-x").addEventListener("click", () => { tip.hidden = true; sel.clear(); needRender = true; });
+document.querySelectorAll("[data-show]").forEach(b => b.addEventListener("click", () => {
+  select(b.dataset.show.split(/\s+/), false); stage.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "center" });
+}));
+const ray = new THREE.Raycaster(), ptr = new THREE.Vector2();
+function nearestPart(pt) {                                 // a tap on the board: the part with a pad (or body) closest to it
+  const bx = pt.x + BW / 2, by = pt.z + BH / 2; let best = null, bd = 2.2;
+  for (const p of PARTS) {
+    const c = Math.cos(p.rot * DEG), s = Math.sin(p.rot * DEG);
+    for (const q of p.pads) { const x = p.x + q[1] * c + q[2] * s, y = p.y - q[1] * s + q[2] * c, d = Math.hypot(x - bx, y - by) - Math.max(q[3], q[4]) / 2; if (d < bd) { bd = d; best = p.ref; } }
+  }
+  return best;
+}
+function hitRefs(e) {
+  const r = renderer.domElement.getBoundingClientRect();
+  ptr.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1); ray.setFromCamera(ptr, camera);
+  const list = [wireGroup, top, bot]; if (partsRoot.visible) list.unshift(partsRoot);
+  for (const h of ray.intersectObjects(list, true)) {
+    if (h.object === top || h.object === bot) return nearestPart(h.point);
+    if (h.object.userData.ref) return h.object.userData.ref;
+  }
+  return null;
+}
+let down = null;
+renderer.domElement.addEventListener("pointerdown", e => { down = [e.clientX, e.clientY, performance.now()]; });
+renderer.domElement.addEventListener("pointerup", e => {
+  if (!down) return; const moved = Math.hypot(e.clientX - down[0], e.clientY - down[1]), dt = performance.now() - down[2]; down = null;
+  if (moved > 6 || dt > 700) return;
+  const ref = hitRefs(e);
+  if (!ref) return;
+  const art = ARTICLE[ref]; select(art && art.dataset.refs.split(/\s+/).length <= 5 ? art.dataset.refs.split(/\s+/) : [ref], true);
+  if (art && art.dataset.refs.split(/\s+/).length > 1) document.getElementById("tip-ref").textContent = ref + " · " + art.querySelector(".ref").textContent;
+});
+let hoverT = 0;
+renderer.domElement.addEventListener("pointermove", e => {
+  if (e.pointerType !== "mouse" || e.buttons) return; const now = performance.now(); if (now - hoverT < 60) return; hoverT = now;
+  renderer.domElement.classList.toggle("hot", !!hitRefs(e));
+});
+
+// ---------------------------------------------------------------- views and render loop
+let view = "iso";
+const DIRS = { iso: [-0.5, 0.62, 0.6], top: [0, 1, 0.0001], bottom: [0, -1, -0.0001], side: [0, 0.2, 1] };
+function setView(k) {
+  view = k; const d = new THREE.Vector3(...DIRS[k]).normalize();
+  const vf = camera.fov * DEG / 2, hf = Math.atan(Math.tan(vf) * camera.aspect);
+  let dist;
+  if (k === "top" || k === "bottom") dist = 1.08 * Math.max(70 / Math.tan(hf), 52 / Math.tan(vf)) + 12;
+  else dist = 1.02 * 78 / Math.sin(Math.min(vf, hf));
+  const tgt = new THREE.Vector3(0, k === "bottom" ? -2 : k === "side" ? 4 : 2, 0);
+  camera.position.copy(tgt).addScaledVector(d, dist); controls.target.copy(tgt); controls.update(); needRender = true;
+  ["iso", "top", "bottom", "side"].forEach(n => document.getElementById("v-" + n).setAttribute("aria-pressed", String(n === k)));
+}
+["iso", "top", "bottom", "side"].forEach(k => document.getElementById("v-" + k).addEventListener("click", () => setView(k)));
+const bParts = document.getElementById("t-parts");
+bParts.addEventListener("click", () => { partsRoot.visible = !partsRoot.visible; bParts.setAttribute("aria-pressed", String(!partsRoot.visible)); needRender = true; });
+const bSpin = document.getElementById("t-spin");
+bSpin.addEventListener("click", () => { controls.autoRotate = !controls.autoRotate; bSpin.setAttribute("aria-pressed", String(controls.autoRotate)); });
+controls.addEventListener("change", () => { needRender = true; });
+function resize() {
+  const w = stage.clientWidth, h = stage.clientHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
+  const sc = Math.min(0.06, 27 / h * 2 * Math.tan(camera.fov * DEG / 2));            // labels about 27 px tall
+  labelSprites.forEach(s => s.scale.set(sc * s.userData.aspect, sc, 1));
+  setView(view);
+}
+new ResizeObserver(resize).observe(stage); resize();
+msg.remove();
+window.__ks3d = { setPaths, select: refs => select(refs, false), setView };
+setPaths(STATE.on);
+(function loop(now) {
+  controls.update();
+  let anim = false;
+  if (!reduce) for (const id in PV) if (PV[id].g.visible) { anim = true; for (const [m, sp] of PV[id].mats) m.map.offset.x = -((now / 1000 * sp) % 1); }
+  if (needRender || anim || controls.autoRotate) { renderer.render(scene, camera); needRender = false; }
+  requestAnimationFrame(loop);
+})(performance.now());
+window.__ready = true;
+})();
+</script>
