@@ -1,32 +1,146 @@
 {
   "units": "mm, N, mT",
-  "hull": {"wall": 6.0, "material": "acrylic, polycarbonate or aluminium (non-magnetic, never steel)", "holes": "none: the dock is glued on the outside"},
-  "dock": {"od": 40.0, "height": 18.0, "bore": 24.0, "floor": 1.5, "bore_depth": 16.5, "entry_chamfer": 1.0,
-           "detent_groove": {"depth": 0.4, "width": 2.4, "centre_above_bore_bottom": 6.0},
-           "vent_slot": {"width": 1.5, "depth": 1.0, "length": "whole bore", "why": "water leaves when the plug goes in and comes back when it is pulled: no hydraulic lock, no suction"},
-           "base": "flat for a box hull; saddle for a tube hull (hull_r in dock_plug.scad)", "glue": "2-part epoxy or acrylic cement for an acrylic hull"},
-  "plug": {"body_dia": 23.6, "length": 16.0, "front_floor": 1.5, "magnet_pocket": {"dia": 15.1, "opens": "from the back"},
-           "magnet": {"grade": "N52", "dia": 15.0, "length": 10.0, "magnetisation": "axial", "pole_toward_hull": "S",
-                      "why": "the A3144 on the KY-003 switches only on a south pole at its printed face; if the HALL LED stays off with the plug in, turn the magnet round"},
-           "o_ring": {"size": "20 x 2", "material": "NBR 70", "groove_dia": 20.6, "groove_width": 2.6, "groove_centre_from_front": 6.0, "squeeze_mm": 0.3},
-           "handle": {"colour": "red", "stem": {"dia": 10.0, "length": 10.0}, "bar": [34.0, 10.0, 6.0], "lanyard_hole": 4.0, "spigot": {"dia": 15.0, "length": 4.0, "fixed_with": "epoxy, closes the magnet pocket"}},
-           "flag": "red REMOVE TO KILL flag on the lanyard",
-           "mass_g": 29.3},
-  "retention": {"pull_out_N": [10, 20], "weight_N": 0.29, "vs_weight": 35, "vibration_5g_N": 1.4, "drag_1p5ms_N": 1.2,
-                "how": "the O-ring snaps into the dock's detent groove; no steel latch (a magnetised steel part near the sensors could hold one on)",
-                "check": "pull it with a luggage scale: it must let go between 10 and 20 N; change the O-ring cord or hardness to tune"},
-  "inside": {"bracket": {"plate": [44.0, 44.0, 1.6], "glued_to": "inside of the hull wall, centred on the dock axis",
-                         "hall_window": [4.4, 3.4], "mc38_seat": "on top of the plate, 1.6 mm off the wall, so it also clamps the A3144 flat"},
-             "hall": {"module": "KY-003 (A3144)", "placement": "A3144 legs bent so its printed face lies flat on the wall, on the axis",
-                      "magnet_face_to_die": 9.5, "field_mT": 104, "margin_vs_operate_max": 3.0, "lead_direction": "away from the MC-38"},
-             "reed": {"module": "MC-38 wired part (normally open, closes with the magnet)", "placement": "body parallel to the wall, long side pointing at the axis, reed centre 12 mm off axis",
-                      "why_off_axis": "a reed lying flat across the axis sees opposite field on its two halves: null on the axis",
-                      "wall_to_reed": 4.6, "field_mT": 24.6, "margin_vs_pull_in_max": 8,
-                      "note": "the MC-38 body (27.5 mm) reaches over the axis, so it sits on the 1.6 mm plate and the A3144 lies in the window under its end"},
-             "alignment": "with the plug in, slide the bracket until HALL and REED LEDs are both solidly on, mark it, then glue",
-             "cables": {"hall": "twisted 3-wire to J4 (S, +, -)", "reed": "twisted 2-wire to J6", "battery": "150 A + and - as a tight pair, at least 10 cm from the sensors"}},
-  "use": {"park_distance_min": 120, "park_distance_better": 300, "park_on": "anything but steel",
-          "timing": {"rearm_s": 1.1, "kill_ms": 5.5, "ignored_glitch_ms": 0.9},
-          "release_out_mm_worst": {"hall": 29, "reed": 79.5}},
-  "files": {"scad": "dock_plug.scad (part = dock | plug | handle | bracket | all)", "stl": "export from OpenSCAD (F6, then File > Export > STL); openscad was not installed where this was made"}
+  "hull": {
+    "wall": 6.0,
+    "material": "acrylic, polycarbonate or aluminium (non-magnetic, never steel)",
+    "holes": "none: the dock is glued on the outside"
+  },
+  "dock": {
+    "od": 40.0,
+    "height": 18.0,
+    "bore": 24.0,
+    "floor": 1.5,
+    "bore_depth": 16.5,
+    "entry_chamfer": 1.0,
+    "detent_groove": {
+      "depth": 0.4,
+      "width": 2.4,
+      "centre_above_bore_bottom": 6.0
+    },
+    "vent_slot": {
+      "width": 1.5,
+      "depth": 1.0,
+      "length": "whole bore",
+      "why": "water leaves when the plug goes in and comes back when it is pulled: no hydraulic lock, no suction"
+    },
+    "base": "flat for a box hull; saddle for a tube hull (hull_r in dock_plug.scad)",
+    "glue": "2-part epoxy or acrylic cement for an acrylic hull"
+  },
+  "plug": {
+    "body_dia": 23.6,
+    "length": 16.0,
+    "front_floor": 1.5,
+    "magnet_pocket": {
+      "dia": 15.1,
+      "opens": "from the back"
+    },
+    "magnet": {
+      "grade": "N52",
+      "dia": 15.0,
+      "length": 10.0,
+      "magnetisation": "axial",
+      "pole_toward_hull": "S",
+      "why": "the A3144 on the KY-003 switches only on a south pole at its printed face; if the HALL LED stays off with the plug in, turn the magnet round"
+    },
+    "o_ring": {
+      "size": "20 x 2",
+      "material": "NBR 70",
+      "groove_dia": 20.6,
+      "groove_width": 2.6,
+      "groove_centre_from_front": 6.0,
+      "squeeze_mm": 0.3
+    },
+    "handle": {
+      "colour": "red",
+      "stem": {
+        "dia": 10.0,
+        "length": 10.0
+      },
+      "bar": [
+        34.0,
+        10.0,
+        6.0
+      ],
+      "lanyard_hole": 4.0,
+      "spigot": {
+        "dia": 15.0,
+        "length": 4.0,
+        "fixed_with": "epoxy, closes the magnet pocket"
+      }
+    },
+    "flag": "red REMOVE TO KILL flag on the lanyard",
+    "mass_g": 29.3
+  },
+  "retention": {
+    "pull_out_N": [
+      10,
+      20
+    ],
+    "weight_N": 0.29,
+    "vs_weight": 35,
+    "vibration_5g_N": 1.4,
+    "drag_1p5ms_N": 1.2,
+    "how": "the O-ring snaps into the dock's detent groove; no steel latch (a magnetised steel part near the sensors could hold one on)",
+    "check": "pull it with a luggage scale: it must let go between 10 and 20 N; change the O-ring cord or hardness to tune"
+  },
+  "inside": {
+    "bracket": {
+      "plate": [
+        44.0,
+        58.0,
+        1.6
+      ],
+      "glued_to": "inside of the hull wall, centred on the dock axis",
+      "hall_window": [
+        4.4,
+        3.4
+      ],
+      "mc38_seat": "on top of the plate, 1.6 mm off the wall, so it also clamps the A3144 flat",
+      "plate_extent": "58 mm along the wall: 30 mm on the KY-003 side of the axis, 28 mm on the MC-38 side"
+    },
+    "hall": {
+      "module": "KY-003 (A3144)",
+      "placement": "A3144 legs bent so its printed face lies flat on the wall, on the axis",
+      "magnet_face_to_die": 9.5,
+      "field_mT": 104,
+      "margin_vs_operate_max": 3.0,
+      "lead_direction": "away from the MC-38"
+    },
+    "reed": {
+      "module": "MC-38 wired part (normally open, closes with the magnet)",
+      "placement": "body parallel to the wall, long side pointing at the axis, reed centre 12 mm off axis",
+      "why_off_axis": "a reed lying flat across the axis sees opposite field on its two halves: null on the axis",
+      "wall_to_reed": 4.6,
+      "field_mT": 24.6,
+      "margin_vs_pull_in_max": 8,
+      "note": "the MC-38 body (27.5 mm) reaches over the axis, so it sits on the 1.6 mm plate and the A3144 lies in the window under its end"
+    },
+    "alignment": "with the plug in, slide the bracket until HALL and REED LEDs are both solidly on, mark it, then glue",
+    "cables": {
+      "hall": "twisted 3-wire from the KY-003 to J3 (1 = S, 2 = +, 3 = -)",
+      "reed": "twisted 2-wire from the MC-38 to J4 (either way round)",
+      "battery": "battery + and - (30 A cont / 60 A burst) as a twisted pair, at least 10 cm from the sensors; 40 A fuse in the + lead"
+    }
+  },
+  "use": {
+    "park_distance_min": 120,
+    "park_distance_better": 300,
+    "park_on": "anything but steel",
+    "timing": {
+      "board": "through-hole board kicad/ks_tht.kicad_pcb (kicad/simulation/summary_tht.md)",
+      "precharge_start_s": 0.77,
+      "precharge_A": "1.4 (4S) / 2.1 (6S)",
+      "live_after_plug_in_s": 0.82,
+      "kill_after_plug_out_ms": 1.6,
+      "ignored_sensor_gap_ms": "under ~1 (0.8 ms tested)"
+    },
+    "release_out_mm_worst": {
+      "hall": 29,
+      "reed": 79.5
+    }
+  },
+  "files": {
+    "scad": "dock_plug.scad (part = dock | plug | handle | bracket | all; hull_r > 0 gives the dock a saddle for a tube hull)",
+    "stl": "dock.stl, plug.stl, handle.stl, bracket.stl: exported with OpenSCAD 2021.01 from dock_plug.scad as it is (flat hull, hull_r = 0)"
+  }
 }
