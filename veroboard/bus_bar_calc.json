@@ -1,0 +1,65 @@
+{
+ "fet": {
+  "name": "IRFB3206PbF (TO-220)",
+  "rds25_max": 0.003,
+  "rds25_typ": 0.0024,
+  "tc": 0.0067,
+  "rth_jc": 0.45,
+  "rth_cs": 0.5,
+  "qg_max": 1.7e-07,
+  "note": "Rds(on) 3.0 mOhm max / 2.4 typ at VGS 10 V, RthJC 0.45 K/W, Qg 170 nC max: verify with the datasheet"
+ },
+ "n": 8,
+ "r_leg_mohm": 0.2,
+ "r_sense_bar_mohm": 0.025799999999999997,
+ "bank_hot_mohm": 0.6142375,
+ "bank_cold_typ_mohm": 0.35079999999999995,
+ "R_sense_min_ohm": 16936.69577205882,
+ "R_sense_ohm": 17400.0,
+ "R_sense_pcb_ohm": 4320.0,
+ "vds_trip_mV": [
+  236.64000000000001,
+  278.4,
+  313.20000000000005
+ ],
+ "trip_A_hot_min": 385.2581452614014,
+ "trip_A_cold_typ": 793.6145952109464,
+ "trip_A_cold_max": 892.8164196123149,
+ "burst_vds_hot_mV": 92.135625,
+ "pcb_trip_A_hot_min": 417.0968386023294,
+ "pcb_burst_vds_hot_mV": 21.128906250000004,
+ "if_pcb_R_kept_trip_A_hot_min": 95.65029813386516,
+ "cont_100A": {
+  "p_fets_W": 4.896907458986754,
+  "p_per_fet_W": 0.7345361188480131,
+  "tj_above_bar_K": 0.697809312905612,
+  "p_bars_lugs_W": 1.116,
+  "p_total_W": 6.012907458986755,
+  "drop_mV": 60.12907458986754,
+  "pcb_p_fets_W": 1.1639235553488314,
+  "pcb_p_total_W": 2.3639235553488316
+ },
+ "burst_150A": {
+  "p_fets_W": 11.067752276601343,
+  "p_per_fet_W": 1.6601628414902014,
+  "tj_above_bar_K": 1.5771546994156935,
+  "p_bars_lugs_W": 2.511,
+  "p_total_W": 13.578752276601342,
+  "drop_mV": 90.5250151773423,
+  "pcb_p_fets_W": 2.6375721184852012,
+  "pcb_p_total_W": 5.337572118485202
+ },
+ "bars": {
+  "vin_bar_mm": "20 x 3 x 120",
+  "vout_bar_mm": "10 x 3 x 120",
+  "mass_g": 96.76800000000001,
+  "heat_capacity_J_per_K": 37.255680000000005,
+  "rise_per_10s_burst_150A_K": 3.6447468618480023,
+  "still_air_K_per_W": 4.822530864197531,
+  "to_hull_K_per_W": 2.5,
+  "rise_100A_still_air_K": 28.997431804527174,
+  "rise_100A_to_hull_K": 15.032268647466886
+ },
+ "gate_charge_uC": 1.924,
+ "pcb_gate_charge_uC": 2.2920000000000003
+}
