@@ -59,9 +59,9 @@ button[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-co
 .chapters button.on { border-color: var(--kill); box-shadow: inset 0 -2px 0 var(--kill); }
 .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px 28px; }
 .facts section { display: grid; gap: 8px; align-content: start; min-width: 0; }
-dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; font-size: 15px; }
+dl { margin: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 14px; font-size: 15px; }
 dt { color: var(--muted); }
-dd { margin: 0; font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 14px; text-align: right; }
+dd { margin: 0; font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 14px; text-align: right; white-space: nowrap; }
 ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; font-size: 15px; }
 .warn { border-left: 3px solid var(--kill); padding: 4px 0 4px 12px; color: var(--fg); font-size: 15px; max-width: 75ch; }
 
@@ -180,20 +180,22 @@ html.vmode .hud * { transition: none !important; }
         <dt>Water drag at 1.5 m/s</dt><dd>1.2 N</dd>
         <dt>Magnet</dt><dd>N52 15 × 10 mm</dd>
         <dt>Pole toward the hull</dt><dd>South</dd>
-        <dt>Hull wall</dt><dd>6 mm, non-magnetic</dd>
-        <dt>Park the plug</dt><dd>≥ 120 mm (30 cm)</dd>
+        <dt>Hull wall, non-magnetic</dt><dd>6 mm</dd>
+        <dt>Park the plug (30 cm is better)</dt><dd>≥ 120 mm</dd>
       </dl>
     </section>
     <section>
       <h2>Sensors and timing</h2>
       <dl>
-        <dt>Hall A3144 (KY-003), on the axis</dt><dd>9.5 mm · ~104 mT</dd>
+        <dt>Hall A3144 (KY-003), on the axis</dt><dd>9.5 mm</dd>
+        <dt>Field at the Hall</dt><dd>~104 mT</dd>
         <dt>Reed MC-38, off the axis</dt><dd>12 mm</dd>
-        <dt>Pre-charge starts</dt><dd>0.77 s · 1.4 A (4S)</dd>
+        <dt>Pre-charge starts</dt><dd>0.77 s</dd>
+        <dt>Pre-charge current (4S)</dt><dd>1.4 A</dd>
         <dt>LIVE after plug in</dt><dd>0.82 s</dd>
         <dt>Off after plug out</dt><dd>1.6 ms</dd>
         <dt>Sensor gap ignored</dt><dd>&lt; ~1 ms</dd>
-        <dt>Current</dt><dd>30 A / 60 A burst</dd>
+        <dt>Current, continuous / burst</dt><dd>30 / 60 A</dd>
       </dl>
     </section>
     <section>

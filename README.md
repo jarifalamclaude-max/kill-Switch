@@ -48,7 +48,7 @@ What this medium version leaves out (to keep it at 95 parts): under- and over-vo
 | Gate voltage | 13.3 V on 4S and 6S |
 | Kill time after the magnet leaves | 1.5–1.6 ms, also with any one sensor fault |
 | Ignored sensor gap | 0.8 ms tested (vibration) |
-| Short on the ESC side while live | off in 0.44 ms (4S) / 0.47 ms (6S); 1.1 J / 2.5 J shared by the 4 MOSFETs |
+| Short on the ESC side while live | off in 0.47 ms (4S and 6S); 1.1 J / 2.6 J shared by the 4 MOSFETs; gate peak 15.9 / 16.1 V |
 | Magnet in with the ESC side shorted | never turns on; 0.29 J in the pre-charge resistors |
 | Battery spike when killing 60 A | 17.7 V peak on 4S, 26.1 V on 6S |
 

@@ -137,7 +137,8 @@
     "release_out_mm_worst": {
       "hall": 29,
       "reed": 79.5
-    }
+    },
+    "park_dock": "optional: print a second dock and glue it where no sensor is, at least 30 cm from the kill dock (the 3D tutorial puts it on the opposite end wall, about 34 cm away); the O-ring holds the plug there too"
   },
   "files": {
     "scad": "dock_plug.scad (part = dock | plug | handle | bracket | all; hull_r > 0 gives the dock a saddle for a tube hull)",
