@@ -136,7 +136,8 @@ part("R33", "R", "4.7k", two("V12F", "SRC"))
 part("R34", "R", "22k", two("DRV", "SRC"))
 part("D10", "D35", "1N4148", two("DRVD", "DRV"))              # steering: lets DRV fall to VOUT when the opto lets go
 part("R35", "R", "10k", two("DRVD", "FG"))
-part("C6", "CF", "220n 100V film", two("FG", "GND"))          # soft start: VOUT ramps ~9 V/ms, no VIN step coupling
+part("C6", "CF", "220n 100V film", two("FGC", "GND"))         # soft start: VOUT ramps ~9 V/ms, no VIN step coupling
+part("R39", "R", "100", two("FGC", "FG"))                       # lets FG follow a sudden VOUT drop (short) instead of C6 holding it up
 part("D11", "DO15", "P6KE18A", two("FG", "SRC"))              # gate-source clamp: C6 holds FG up when a short drops VOUT
 part("Q12", "TO92", "BC327", {"1": "QOC", "2": "QOB", "3": "FG"})
 part("R36", "R", "47", two("QOC", "SRC"))
@@ -159,13 +160,13 @@ FIXED.update({
     "Q5": (19.05, ROW_Y, 0), "R1": (20.32, 3.81, 270), "D3": (15.24, 3.81, 270),
     "F1": (19.05, 18.42, 180), "R3": (8.89, 22.86, 0), "R4": (8.89, 27.94, 0),
     "R2": (19.05, 34.29, 0), "Q6": (11.43, 34.29, 0),
-    "D1": (40.64, 5.08, 0), "D2": (88.9, 22.86, 0),
+    "D1": (40.64, 3.81, 0), "D2": (88.9, 27.94, 0),
     "RK1": (29.21, 2.54, 270), "RK2": (30.48, 22.86, 270), "TP1": (82.55, 25.4, 0),
     "U1": (86.36, 45.72, 90),
 })
 # the rest is packed in rows inside regions, group by group, pin 1 on the 2.54 mm grid
 REGIONS = [
-    ("float", (2.0, 37.0, 58.0, 60.0), ["U3", "C4", "C5", "D5", "R33", "U4", "R34", "D10", "R35", "C6", "D11", "Q12", "R36", "R37", "D6", "R38", "R32"]),
+    ("float", (2.0, 37.0, 58.0, 60.0), ["U3", "C4", "C5", "D5", "R33", "U4", "R34", "D10", "R35", "C6", "R39", "D11", "Q12", "R36", "R37", "D6", "R38", "R32"]),
     ("supply", (60.0, 37.0, 118.0, 58.0), ["D4", "R5", "C1", "C2", "R6", "R7", "C8", "TP3", "TP4"]),
     ("logic", (60.0, 59.0, 118.0, 100.0), ["U2", "C3", "R21", "R22", "R23", "C9", "R24", "R25", "C10", "R26", "R27", "C11", "R28",
                                           "R29", "R30", "Q10", "Q11", "R31"]),

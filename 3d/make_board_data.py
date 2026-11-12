@@ -1,88 +1,102 @@
-"""Board texture (board_top.jpg) and part boxes (board_parts.json) for the 3D tutorial, read from
-../kicad/ks_power.kicad_pcb. Run with KiCad 7's python:  /usr/bin/python3 make_board_data.py"""
-import json, math, os
+"""Board texture and part list for the 3D tutorial, read from ../kicad/ks_tht.kicad_pcb (read only).
+
+  /usr/bin/python3 make_board_data.py      (KiCad 7's python, kicad-cli and rsvg-convert on the PATH)
+
+Exports F.Cu, F.Mask, F.Silkscreen and Edge.Cuts as SVG with kicad-cli into a temporary folder, rasterises them
+with rsvg-convert, paints a green solder-mask board (copper under the mask, tinned pads, drilled holes, white
+silkscreen) and writes it, with every footprint's position and pads, into index.html between the BOARD markers.
+Board-level silkscreen texts that are not in TEXTS_KEPT are left out of the picture.
+"""
+import base64, io, json, os, re, subprocess, tempfile
 import pcbnew
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageChops, ImageDraw, ImageFilter
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-PCB = os.path.join(HERE, "..", "kicad", "ks_power.kicad_pcb")
-OX = OY = 100.0
-W, H = 118.0, 120.0
-S = 10                                   # px per mm
-MASK, CU_MASK, PAD, SILK, HOLE = (12, 84, 50), (30, 118, 70), (205, 205, 200), (240, 240, 235), (25, 25, 25)
+PCB = os.path.join(HERE, "..", "kicad", "ks_tht.kicad_pcb")
+PAGE = os.path.join(HERE, "index.html")
+OX = OY = 100.0                  # KiCad page offset used by build_tht.py
+W, H = 120.0, 98.0
+S = 10                           # px per mm
+TEXTS_KEPT = ("MAGNETIC KILL SWITCH", "4S-6S LiPo", "BATTERY", "ESCs", "4 x IRFB3206", "GATE DRIVE")
+MASK, MASK_CU, PAD, FR4, SILK, HOLE = (22, 92, 54), (40, 122, 72), (196, 198, 190), (190, 172, 120), (238, 240, 232), (16, 18, 16)
 
-b = pcbnew.LoadBoard(PCB)
 mm = pcbnew.ToMM
-px = lambda x, y: ((mm(x) - OX) * S, (mm(y) - OY) * S)
-img = Image.new("RGB", (int(W * S), int(H * S)), MASK)
-d = ImageDraw.Draw(img)
+b = pcbnew.LoadBoard(PCB)
 
-# copper pours on F.Cu (seen through the mask)
-for z in [b.GetArea(i) for i in range(b.GetAreaCount())]:
-    if z.GetIsRuleArea() or not z.IsOnLayer(pcbnew.F_Cu): continue
-    ps = z.GetFilledPolysList(pcbnew.F_Cu)
-    for i in range(ps.OutlineCount()):
-        o = ps.Outline(i)
-        d.polygon([px(o.CPoint(j).x, o.CPoint(j).y) for j in range(o.PointCount())], fill=CU_MASK)
-        for h in range(ps.HoleCount(i)):
-            hp = ps.Hole(i, h)
-            d.polygon([px(hp.CPoint(j).x, hp.CPoint(j).y) for j in range(hp.PointCount())], fill=MASK)
-# tracks and vias
-for t in b.GetTracks():
-    if t.GetClass() == "PCB_VIA":
-        x, y = px(t.GetPosition().x, t.GetPosition().y); r = mm(t.GetWidth()) / 2 * S; rd = mm(t.GetDrill()) / 2 * S
-        d.ellipse([x - r, y - r, x + r, y + r], fill=CU_MASK); d.ellipse([x - rd, y - rd, x + rd, y + rd], fill=HOLE)
-    elif t.GetLayer() == pcbnew.F_Cu:
-        w = max(1, int(round(mm(t.GetWidth()) * S)))
-        a, c = px(t.GetStart().x, t.GetStart().y), px(t.GetEnd().x, t.GetEnd().y)
-        d.line([a, c], fill=CU_MASK, width=w)
-        for p in (a, c): d.ellipse([p[0] - w / 2, p[1] - w / 2, p[0] + w / 2, p[1] + w / 2], fill=CU_MASK)
-# pads (exposed, tinned)
+# ------------------------------------------------------------------ layer pictures
+tmp = tempfile.mkdtemp(prefix="ks_tht_svg_")
+def layer(name):
+    svg = os.path.join(tmp, name + ".svg")
+    subprocess.run(["kicad-cli", "pcb", "export", "svg", "--layers", name + ",Edge.Cuts" if name != "Edge.Cuts" else name,
+                    "--black-and-white", "--page-size-mode", "2", "--exclude-drawing-sheet", "--drill-shape-opt", "2",
+                    "-o", svg, PCB], check=True, capture_output=True)
+    return svg
+svgs = {n: layer(n) for n in ("Edge.Cuts", "F.Cu", "F.Mask", "F.Silkscreen")}
+head = open(svgs["Edge.Cuts"]).read()
+vb = [float(v) for v in re.search(r'viewBox="([^"]+)"', head).group(1).split()]
+xs = [float(v) for v in re.findall(r"[ML]([-\d.]+) [-\d.]+", head)]
+ys = [float(v) for v in re.findall(r"[ML][-\d.]+ ([-\d.]+)", head)]
+x0, y0 = min(xs), min(ys)        # SVG position of the board's top-left corner (centre of the 0.1 mm edge line)
+
+def raster(name):
+    png = os.path.join(tmp, name + ".png")
+    subprocess.run(["rsvg-convert", "-b", "white", "-w", str(round(vb[2] * S)), "-h", str(round(vb[3] * S)), "-o", png, svgs[name]], check=True)
+    im = Image.open(png).convert("L")
+    im = im.crop((round(x0 * S), round(y0 * S), round((x0 + W) * S), round((y0 + H) * S)))
+    return im.point(lambda v: 255 if v < 128 else 0)          # 255 where the layer has something
+
+cu, mask_open, silk = raster("F.Cu"), raster("F.Mask"), raster("F.Silkscreen")
+
+# leave out board-level texts that are not on the list (a name, for example)
+blank = ImageDraw.Draw(silk)
+for d in b.GetDrawings():
+    if d.GetClass() == "PCB_TEXT" and d.GetLayer() == pcbnew.F_SilkS and not d.GetShownText().startswith(TEXTS_KEPT):
+        bb = d.GetBoundingBox()
+        blank.rectangle([(mm(bb.GetLeft()) - OX - 0.6) * S, (mm(bb.GetTop()) - OY - 0.6) * S,
+                         (mm(bb.GetRight()) - OX + 0.6) * S, (mm(bb.GetBottom()) - OY + 0.6) * S], fill=0)
+
+size = cu.size
+img = Image.new("RGB", size, MASK)
+img.paste(Image.new("RGB", size, MASK_CU), mask=cu)
+bare = ImageChops.subtract(mask_open, cu)
+img.paste(Image.new("RGB", size, FR4), mask=bare)
+img.paste(Image.new("RGB", size, PAD), mask=ImageChops.multiply(mask_open, cu))
+# drilled holes from the pads (the black and white plot paints them white, which would read as bare copper)
+d = ImageDraw.Draw(img)
 for fp in b.GetFootprints():
     for p in fp.Pads():
-        if not (p.IsOnLayer(pcbnew.F_Cu) or p.GetAttribute() == pcbnew.PAD_ATTRIB_NPTH): continue
-        x, y = px(p.GetPosition().x, p.GetPosition().y)
-        sx, sy = mm(p.GetSize().x) * S / 2, mm(p.GetSize().y) * S / 2
-        a = math.radians(-p.GetOrientationDegrees())
-        npth = p.GetAttribute() == pcbnew.PAD_ATTRIB_NPTH
-        if p.GetShape() == pcbnew.PAD_SHAPE_CIRCLE or npth:
-            r = max(sx, sy)
-            d.ellipse([x - r, y - r, x + r, y + r], fill=MASK if npth else PAD)
-        else:
-            pts = [(x + cx * math.cos(a) - cy * math.sin(a), y + cx * math.sin(a) + cy * math.cos(a)) for cx, cy in ((-sx, -sy), (sx, -sy), (sx, sy), (-sx, sy))]
-            d.polygon(pts, fill=PAD)
         if p.GetDrillSize().x > 0:
+            x, y = (mm(p.GetPosition().x) - OX) * S, (mm(p.GetPosition().y) - OY) * S
             r = mm(p.GetDrillSize().x) / 2 * S
             d.ellipse([x - r, y - r, x + r, y + r], fill=HOLE)
-# silkscreen labels that matter in the video
-def font(sz):
-    for f in ("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"):
-        if os.path.exists(f): return ImageFont.truetype(f, sz)
-    return ImageFont.load_default()
-F2, F3, F4 = font(int(2.0 * S)), font(int(2.6 * S)), font(int(3.6 * S))
-def label(x, y, s, f=F2, anchor="mm"): d.text((x * S, y * S), s, fill=SILK, font=f, anchor=anchor)
-F15 = font(int(1.5 * S))
-for x, s in ((48, "HALL"), (53, "REED"), (58, "SAFE"), (63, "LIVE")):
-    d.text((x * S, 117.4 * S), s, fill=SILK, font=F15, anchor="mm")
-label(20, 109.6, "J4 HALL"); label(33, 109.6, "J6 REED"); label(95.75, 109.6, "J5 STATUS")
-label(58, 17.5, "BAT+ IN", F3); label(58, 64.5, "OUT+ ESC", F3); label(5.75, 57, "GND", F3)
-label(55, 79.0, "MAGNETIC KILL SWITCH  150 A", F3)
-label(55, 39.8, "8 x IPT007N06N  (VIN -> VOUT)", F2)
-img = img.resize((int(W * 8), int(H * 8)), Image.LANCZOS)
-img.save(os.path.join(HERE, "board_top.jpg"), quality=86)
+for t in b.GetTracks():
+    if t.GetClass() == "PCB_VIA":
+        x, y = (mm(t.GetPosition().x) - OX) * S, (mm(t.GetPosition().y) - OY) * S
+        r = mm(t.GetDrill()) / 2 * S
+        d.ellipse([x - r, y - r, x + r, y + r], fill=HOLE)
+img.paste(Image.new("RGB", size, SILK), mask=silk.filter(ImageFilter.GaussianBlur(0.4)))
+img = img.filter(ImageFilter.UnsharpMask(radius=1.2, percent=60, threshold=2))
+buf = io.BytesIO()
+img.save(buf, "JPEG", quality=84, optimize=True, progressive=True)
+img.save(os.path.join(tmp, "board_top.jpg"), "JPEG", quality=84)
 
-# part boxes for the 3D model: ref, kind, centre x/y, size x/y (mm, board coordinates)
+# ------------------------------------------------------------------ parts
 parts = []
-for fp in b.GetFootprints():
-    ref = fp.GetReference(); name = fp.GetFPID().GetLibItemName().wx_str()
-    if ref.startswith("H") or "MountingHole" in name and not ref.startswith("J"): continue
-    bb = fp.GetBoundingBox(False, False)
-    cx, cy = mm(bb.GetCenter().x) - OX, mm(bb.GetCenter().y) - OY
-    w, h = mm(bb.GetWidth()), mm(bb.GetHeight())
-    kind = ("fet" if name.startswith("Infineon") else "led" if name.startswith("LED") else "jst" if name.startswith("JST") else
-            "stud" if "MountingHole" in name else "ic" if name.startswith(("MSOP", "SOIC", "SMDIP", "SOT-223", "TO-252")) else
-            "tvs" if name.startswith("D_SMC") else "sot" if name.startswith("SOT-23") else "small")
-    if kind == "stud": cx, cy = mm(fp.GetPosition().x) - OX, mm(fp.GetPosition().y) - OY
-    parts.append([ref, kind, round(cx, 2), round(cy, 2), round(w, 2), round(h, 2), fp.GetValue()])
-json.dump(parts, open(os.path.join(HERE, "board_parts.json"), "w"))
-print(len(parts), "parts; texture", img.size)
+for fp in sorted(b.GetFootprints(), key=lambda f: f.GetReference()):
+    p = fp.GetPosition()
+    pads = []
+    for pad in fp.Pads():
+        q = pad.GetPosition()
+        pads.append([pad.GetNumber(), round(mm(q.x) - OX, 3), round(mm(q.y) - OY, 3), round(mm(pad.GetDrillSize().x), 2)])
+    pads.sort(key=lambda r: (len(r[0]), r[0]))
+    parts.append({"ref": fp.GetReference(), "fp": fp.GetFPID().GetLibItemName().wx_str(), "val": fp.GetValue(),
+                  "x": round(mm(p.x) - OX, 3), "y": round(mm(p.y) - OY, 3), "rot": round(fp.GetOrientationDegrees(), 1), "pads": pads})
+
+data = {"w": W, "h": H, "parts": parts, "tex": "data:image/jpeg;base64," + base64.b64encode(buf.getvalue()).decode()}
+block = "/*BOARD:BEGIN*/const BOARD = " + json.dumps(data, separators=(",", ":")) + ";/*BOARD:END*/"
+page = open(PAGE).read()
+page, n = re.subn(r"/\*BOARD:BEGIN\*/.*?/\*BOARD:END\*/", lambda m: block, page, flags=re.S)
+if n != 1:
+    raise SystemExit("index.html has no BOARD markers")
+open(PAGE, "w").write(page)
+print(f"{len(parts)} parts, texture {img.size[0]}x{img.size[1]} px, {len(buf.getvalue()) // 1024} kB; preview in {tmp}")

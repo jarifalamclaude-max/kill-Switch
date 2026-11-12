@@ -68,8 +68,8 @@ module dock() {
         translate([bore / 2 - e, -vent_w / 2, dock_floor]) cube([vent_d + e, vent_w, dock_h]);
         // saddle for a tube hull: the tube touches the dock floor at the axis
         if (hull_r > 0) translate([0, 0, -hull_r]) rotate([90, 0, 0]) cylinder(r = hull_r, h = dock_od + 2, center = true, $fn = 360);
-        // marks on the rim: vent position and "S to hull" reminder
-        translate([0, dock_od / 2 - 0.6, dock_h / 2]) rotate([-90, 0, 0]) linear_extrude(1) text("S>", size = 4, halign = "center", valign = "center");
+        // "S>" engraved on the side: the magnet's south pole goes in first (toward the hull)
+        translate([0, dock_od / 2 - 0.6, dock_h / 2]) rotate([90, 0, 180]) linear_extrude(1) text("S>", size = 4, halign = "center", valign = "center");
     }
 }
 

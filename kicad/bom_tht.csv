@@ -76,6 +76,7 @@ R35,"10k",R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical
 R36,"47",R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical
 R37,"10k",R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical
 R38,"1k",R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical
+R39,"100",R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical
 RG1,"10",R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal
 RG2,"10",R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal
 RG3,"10",R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal

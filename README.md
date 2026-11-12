@@ -7,7 +7,7 @@ There are two versions in this repository:
 | | Through-hole (main) | SMD (first version) |
 |---|---|---|
 | Board | `kicad/ks_tht.kicad_pcb`, 120 × 98 mm | `kicad/ks_power.kicad_pcb`, 118 × 120 mm |
-| Parts | 95 (4 of them test pads), all through-hole | 117, SMD (TOLL, MSOP, 0603) |
+| Parts | 96 (4 of them test pads), all through-hole | 117, SMD (TOLL, MSOP, 0603) |
 | Battery and ESC side | XT60 in, XT60 out | M5 ring lugs |
 | Current | 30 A continuous / 60 A burst (XT60 rating) | 100 A continuous / 150 A burst |
 | Switch | 4 × IRFB3206 (TO-220) | 8 × IPT007N06N (TOLL) |
@@ -94,7 +94,7 @@ The XT60 is rated 30 A continuous and 60 A for under a minute ([Holybro connecto
 
 - Build one board and test it on a bench supply with a current limit first, then with the battery and one ESC, then at full current.
 - Measure the KY-003 and MC-38 with the magnet: KY-003 modules use A3144 or clones (operate about 7–35 mT, release 5–33 mT), and reed sensitivity varies by maker.
-- The B0512S output is unregulated (about 14 V at light load in the model); the 15 V zener and the P6KE18A keep the gate below 20 V. In the 6S hard-short case the simulated gate peak is 19.7 V, close to the IRFB3206's 20 V limit.
+- The B0512S output is unregulated (about 14 V at light load in the model); the 15 V zener and the P6KE18A keep the gate below 20 V. A 100 Ohm resistor (R39) in series with the soft-start capacitor keeps the simulated gate peak at 16.1 V in the 6S hard-short case (IRFB3206 limit 20 V).
 - The simulation models (MOSFETs fitted to datasheet numbers, behavioural comparators, opto, isolated module) are approximations.
 
 ## Folders
