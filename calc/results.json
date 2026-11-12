@@ -1,0 +1,328 @@
+{
+ "spec": {
+  "i_cont": 100.0,
+  "i_burst": 150.0,
+  "burst_s": 10.0,
+  "v_min": 9.0,
+  "v_max_4s": 16.8,
+  "v_max_6s": 25.2,
+  "t_air": 40.0
+ },
+ "parts": {
+  "mosfet": {
+   "name": "Infineon IPT007N06N (TOLL)",
+   "n": 8,
+   "vds": 60,
+   "rds25_max": 0.00075,
+   "rds_tc": 0.0067,
+   "qg": 2.16e-07,
+   "vgs_max": 20,
+   "rth_ja_6cm2": 40.0,
+   "src": "Infineon datasheet Rev 2.3 via LCSC/Infineon CN summary"
+  },
+  "lm5060": {
+   "i_gate": [
+    1.7e-05,
+    2.4e-05,
+    3.1e-05
+   ],
+   "i_tmr_start": [
+    4e-06,
+    6e-06,
+    7e-06
+   ],
+   "i_tmr_fault": 1.1e-05,
+   "v_tmrh": 2.0,
+   "i_sense": [
+    1.36e-05,
+    1.6e-05,
+    1.8e-05
+   ],
+   "i_pd_off": 0.0022,
+   "i_pd_fault": 0.08,
+   "en_on": 2.0,
+   "en_off": 0.8,
+   "uvlo_th": [
+    1.45,
+    1.6,
+    1.75
+   ],
+   "uvlo_hys": 0.18,
+   "uvlo_i": 5.5e-06,
+   "ovp_on": 2.0,
+   "ovp_off": 1.76,
+   "vin": [
+    5.5,
+    65
+   ]
+  },
+  "tvs": {
+   "name": "SMDJ26A (3 kW, SMC); SMCJ26A data shown for the 26 V family",
+   "vrwm": 26.0,
+   "vbr_min": 28.9,
+   "vc": 42.1,
+   "ipp": 35.7,
+   "ppk_w": 3000
+  },
+  "hall": {
+   "name": "KY-003 module, A3144 unipolar switch (south pole), open collector",
+   "bop_max": 0.035,
+   "brp_min": 0.005,
+   "vcc": [
+    4.5,
+    24
+   ],
+   "note": "A3144 switch points are approximate (7-35 mT operate, 5-33 mT release): verify on your part"
+  },
+  "reed": {
+   "name": "MC-38 style reed door contact, closed with the magnet",
+   "sw_a": [
+    0.1,
+    0.5
+   ],
+   "v_max": 100,
+   "pull_in_mT": [
+    1.0,
+    3.0
+   ],
+   "drop_out_mT": 0.5
+  },
+  "magnet": {
+   "grade": "N52",
+   "br": [
+    1.4,
+    1.43,
+    1.48
+   ],
+   "dia": 0.015,
+   "length": 0.01,
+   "density": 7500
+  }
+ },
+ "geom": {
+  "plug_floor": 0.0015,
+  "dock_floor": 0.0015,
+  "hull_wall": 0.006,
+  "spacer": 0.0,
+  "hall_depth": 0.0005,
+  "reed_offset": 0.012,
+  "reed_len": 0.014,
+  "reed_depth": 0.003
+ },
+ "magnet": {
+  "z_hall_mm": 9.500000000000002,
+  "bz_hall_mT_min_br": 103.92398846874333,
+  "bz_hall_mT_typ": 106.15093107878782,
+  "loop_model_check_mT": 106.15083156334506,
+  "hall_on_margin_vs_bop_max": 2.9692568133926667,
+  "reed_axial_mean_mT": 30.807991499510887,
+  "reed_axial_min_mT": 20.909376901542238,
+  "reed_axial_max_mT": 36.187995251810484,
+  "reed_on_axis_mean_mT": 1.5593276940675738e-07,
+  "reed_on_margin_vs_pullin_max": 10.269330499836963,
+  "hall_release_extra_mm_worst": 29.000000000000025,
+  "reed_release_extra_mm_worst": 79.50000000000007,
+  "park_distance_mm": 120,
+  "bz_vs_pull_mm": [
+   [
+    0,
+    106.151
+   ],
+   [
+    2,
+    76.212
+   ],
+   [
+    5,
+    48.607
+   ],
+   [
+    10,
+    25.613
+   ],
+   [
+    15,
+    14.998
+   ],
+   [
+    20,
+    9.494
+   ],
+   [
+    30,
+    4.482
+   ],
+   [
+    40,
+    2.455
+   ],
+   [
+    60,
+    0.967
+   ],
+   [
+    80,
+    0.475
+   ],
+   [
+    100,
+    0.267
+   ],
+   [
+    150,
+    0.09
+   ]
+  ]
+ },
+ "stray_field_150A": [
+  {
+   "d_cm": 2,
+   "single_wire_mT": 1.5,
+   "paired_mT": 0.8999999999999999
+  },
+  {
+   "d_cm": 5,
+   "single_wire_mT": 0.6000000000000001,
+   "paired_mT": 0.144
+  },
+  {
+   "d_cm": 10,
+   "single_wire_mT": 0.30000000000000004,
+   "paired_mT": 0.036
+  },
+  {
+   "d_cm": 20,
+   "single_wire_mT": 0.15000000000000002,
+   "paired_mT": 0.009
+  }
+ ],
+ "thermal": {
+  "cont_100A": {
+   "r_bank_mohm": 0.11639235553488313,
+   "p_fets_W": 1.1639235553488314,
+   "p_per_fet_W": 0.1745885333023247,
+   "tj_est_C": 61.047531199813946,
+   "vds_mV": 11.639235553488314,
+   "p_copper_lugs_W": 1.2,
+   "p_total_W": 2.3639235553488316,
+   "drop_total_mV": 23.639235553488312
+  },
+  "burst_150A": {
+   "r_bank_mohm": 0.11722542748823117,
+   "p_fets_W": 2.6375721184852012,
+   "p_per_fet_W": 0.3956358177727802,
+   "tj_est_C": 62.37381490663668,
+   "vds_mV": 17.583814123234674,
+   "p_copper_lugs_W": 2.7,
+   "p_total_W": 5.337572118485202,
+   "drop_total_mV": 35.583814123234674
+  },
+  "board_rise_no_spreader_C": 8.208067900516776,
+  "board_rise_with_al_spreader_to_hull_C": 5.909808888372079,
+  "compare_100A_W": {
+   "3x IRF4905 P-FET (20 mOhm each)": 66.66666666666667,
+   "4x IRLZ44N style N-FET (22 mOhm)": 55.0,
+   "this design 8x IPT007N06N": 1.1639235553488314,
+   "100 A contactor coil (typ. 12 V, 0.4-0.8 A)": 7.199999999999999
+  }
+ },
+ "turn_off": {
+  "plateau_us": 17.6,
+  "di_dt_150A_A_per_us": 8.522727272727272,
+  "spike_1uH_V": 8.522727272727272,
+  "energy_150A_16V8_mJ": 22.176000000000002,
+  "without_pnp_ms": 1.041818181818182
+ },
+ "lm5060": {
+  "uvlo_rise_V": 9.3785,
+  "uvlo_fall_V": 8.094000000000001,
+  "ovp": {
+   "6S default 150k": {
+    "rise_V": 32.0,
+    "fall_V": 28.16
+   },
+   "4S option 91k": {
+    "rise_V": 20.2,
+    "fall_V": 17.776
+   }
+  },
+  "R_sense_ohm": 4320.0,
+  "vds_trip_mV": [
+   58.751999999999995,
+   69.12,
+   77.75999999999999
+  ],
+  "trip_current_A_hot_max": 417.0968386023294,
+  "trip_current_A_cold_typ": 1131.0545454545454,
+  "burst_vds_hot_mV": 21.128906250000004,
+  "t_start_ms": [
+   235.00000000000003,
+   156.66666666666669,
+   134.28571428571428
+  ],
+  "t_fault_ms": 85.45454545454547,
+  "gate_charge_uC": 2.2920000000000003,
+  "t_full_enhance_ms": [
+   134.82352941176472,
+   95.5,
+   73.93548387096776
+  ],
+  "t_off_normal_ms": 1.041818181818182
+ },
+ "precharge": {
+  "16.8V": {
+   "inrush_A": 1.5272727272727273,
+   "v_final_with_idle_V": 12.4,
+   "t_to_50pct_ms": 30.49847594463759,
+   "energy_in_R_J": 0.5644800000000001,
+   "short_power_W": 25.65818181818182
+  },
+  "25.2V": {
+   "inrush_A": 2.290909090909091,
+   "v_final_with_idle_V": 20.799999999999997,
+   "t_to_50pct_ms": 30.49847594463759,
+   "energy_in_R_J": 1.2700799999999999,
+   "short_power_W": 57.73090909090909
+  },
+  "abort": {
+   "tau_ms": 148.13753581661894,
+   "offset_mV": 46.45224231912784,
+   "vout_needed_at_end": "VOUT > 0.453 x VIN - 0.47 V",
+   "t_abort_short_16.8V_ms": 9.41766149850717,
+   "energy_short_16.8V_J": 0.24164007103078763,
+   "t_abort_short_25.2V_ms": 6.211454689274444,
+   "energy_short_25.2V_J": 0.35859292598880393
+  },
+  "precharge_ok_threshold": "VOUT > 0.502 x VIN - 0.47 V"
+ },
+ "timing": {
+  "arm_tau_ms": 4.840000000000001,
+  "kill_inverter_path_ms": 5.093726866001878,
+  "kill_pnp_path_ms": 9.664921052791598,
+  "gate_off_ms": 0.3757377049180329,
+  "kill_total_ms_est": 5.469464570919912,
+  "ignored_gap_ms": 0.9284140280962165,
+  "rearm_delay_s": 1.0798149055305064
+ },
+ "impedance": {
+  "L_battery_uH": 1.0,
+  "C_esc_uF": 4000.0,
+  "Z0_mohm": 15.811388300841896,
+  "R_loop_mohm": 26.099999999999998,
+  "damping": 0.825354469303947,
+  "hard_switch_inrush_A": 643.6781609195403,
+  "turn_off_energy_battery_lead_mJ": 11.25,
+  "turn_off_energy_output_lead_mJ": 5.625
+ },
+ "retention": {
+  "plug_mass_g": 29.25359400733194,
+  "weight_N": 0.28697775721192637,
+  "design_pull_out_N": [
+   10,
+   20
+  ],
+  "margin_vs_weight": 34.845906167617144,
+  "vibration_5g_N": 1.4348887860596318,
+  "drag_1p5ms_flag_N": 1.2149999999999999
+ }
+}

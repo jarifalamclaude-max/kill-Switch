@@ -1,0 +1,6 @@
+kicad/simulation/out/
+__pycache__/
+*.pyc
+*.kicad_prl
+*-backups/
+fp-info-cache
