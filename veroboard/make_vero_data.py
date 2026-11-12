@@ -103,7 +103,7 @@ def kind_and_names(ref, fp, pads):
 VALUE = {   # value text on the plan (the PCB value, made clearer where the part differs on perfboard)
     "J1": "XT60 male pigtail, 12 AWG (to battery)", "J2": "XT60 female pigtail, 12 AWG (to ESCs)",
     "U3": "B0512S-1WR3", "U1": "L7805CV", "U2": "LM339N", "U4": "PC817", "F1": "RXEF050 PTC",
-    "J3": "KY-003 (S + -)", "J4": "MC-38 reed",
+    "J3": "KY-003", "J4": "MC-38",
 }
 
 def rnd(v): return int(math.floor(v + 0.5 + 1e-6))      # half-hole positions round up (float-safe)
