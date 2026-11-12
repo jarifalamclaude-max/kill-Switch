@@ -110,6 +110,11 @@ The XT60 is rated 30 A continuous and 60 A for under a minute ([Holybro connecto
 | `kicad/build_ks.py`, `route_ks.py`, `ks_power.*` | SMD board (100 A / 150 A, LM5060) |
 | `kicad/simulation/run_ks.py`, `summary.md` | SMD board simulation, 15 scenarios |
 | `gerber/`, `kill_switch_gerber_jlcpcb.zip`, `kill_switch_kicad.zip` | SMD gerbers and KiCad project |
+| `veroboard/` | Perfboard version of the through-hole board, generated from the PCB, with schematic, wire list and parts |
+| `pcb-3d/` | 3D through-hole board with every part and the current paths on the real copper |
+| `3d/` | Tutorial: video `kill_switch_tutorial.mp4` (64 s) and an interactive 3D scene of a diver pulling and re-arming the plug |
+| `mech/` | Dock, plug, T-handle and inside sensor bracket (OpenSCAD, STL) |
+| `SIMULATION_RESULT.md` | Final simulation run on the finished through-hole board |
 | `calc/` | `design_calc.py`: magnet field (exact loop model), reed placement, cable stray field, losses, timing, plug retention (`report.md`) |
 
 ## Rebuilding (through-hole board)
