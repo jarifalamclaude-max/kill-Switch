@@ -286,12 +286,17 @@ class PourMap:
 #   ("~NET", layer, "REF.PAD", "REF.PAD", style) through that net's pour on layer 0 (F.Cu) or 1 (B.Cu)
 # styles: "main" (the big current), "ret" (its return), "sig" (this path's own current), "ctl" (a control signal)
 FETS = [f"Q{i}" for i in range(1, 5)]
+DRAIN_X = [36.83, 49.53, 62.23, 74.93]; SRC_X = [39.37, 52.07, 64.77, 77.47]
+WV, WO, WG = 8.1, 22.7, 107.8              # centre lines of the VIN wire (top), VOUT wire (top) and the GND wire (bottom)
 LEGS = {
- "main": [x for q in FETS for x in (("~VIN", 0, "J1.2", f"{q}.2", "main"), ("@", f"{q}.2", f"{q}.3", "main"), ("~VOUT", 0, f"{q}.3", "J2.2", "main"))]
-         + [("~GND", 1, "J2.1", "J1.1", "ret")],
+ "main": [("~VIN", 0, "J1.2", [12.8, WV], "main"), ("=", 0, [[12.8, WV], [DRAIN_X[-1], WV]], "main")]
+         + [x for q, xd, xs in zip(FETS, DRAIN_X, SRC_X) for x in (("~VIN", 0, [xd, WV], f"{q}.2", "main"), ("@", f"{q}.2", f"{q}.3", "main"),
+                                                                    ("~VOUT", 0, f"{q}.3", [xs, WO], "main"))]
+         + [("=", 0, [[SRC_X[0], WO], [108.2, WO]], "main"), ("~VOUT", 0, [108.2, WO], "J2.2", "main"),
+            ("~GND", 1, "J2.1", [WG, 23.4], "ret"), ("=", 1, [[WG, 23.4], [WG, WV], [31.6, WV]], "ret"), ("~GND", 1, [31.6, WV], "J1.1", "ret")],
  "pre": [("~VIN", 0, "J1.2", "Q5.3", "sig"), ("@", "Q5.3", "Q5.2", "sig"), ("PCD", "Q5.2", "F1.1", "sig"), ("@", "F1.1", "F1.2", "sig"),
          ("PCF", "F1.2", "R3.1", "sig"), ("PCF", "F1.2", "R4.1", "sig"), ("@", "R3.1", "R3.2", "sig"), ("@", "R4.1", "R4.2", "sig"),
-         ("~VOUT", 0, "R3.2", "J2.2", "sig"), ("~VOUT", 0, "R4.2", "J2.2", "sig"),
+         ("VOUT", "R4.2", "R3.2", "sig"), ("VOUT", "R3.2", "RK2.1", "sig"), ("~VOUT", 0, "RK2.1", "J2.2", "sig"),
          ("@", "R1.1", "R1.2", "ctl"), ("PCG", "R1.2", "Q5.1", "ctl"), ("PCG", "Q5.1", "R2.1", "ctl"), ("@", "R2.1", "R2.2", "ctl"),
          ("PCDN", "R2.2", "Q6.3", "ctl"), ("@", "Q6.3", "Q6.1", "ctl"), ("@", "D3.1", "D3.2", "ctl"), ("PCG", "D3.2", "Q5.1", "ctl")],
  "gate": [("V5", "C4.1", "U3.2", "ctl"), ("@", "U3.2", "U3.4", "sig"), ("V12F", "U3.4", "U4.4", "sig"), ("@", "U4.4", "U4.3", "sig"),
@@ -299,7 +304,8 @@ LEGS = {
          + [("FG", "R35.2", f"RG{i}.2", "sig") for i in range(1, 5)]
          + [x for i in range(1, 5) for x in (("@", f"RG{i}.2", f"RG{i}.1", "sig"), (f"G{i}", f"RG{i}.1", f"Q{i}.1", "sig"))]
          + [("~VOUT", 0, "Q2.3", "RK2.1", "ret"), ("@", "RK2.1", "RK2.2", "ret"), ("SRC", "RK2.2", "U3.3", "ret"),
-            ("FG", "R35.2", "C6.1", "ctl"), ("FG", "R35.2", "D11.1", "ctl"), ("@", "D11.1", "D11.2", "ctl"),
+            ("FG", "R35.2", "R39.2", "ctl"), ("@", "R39.2", "R39.1", "ctl"), ("FGC", "R39.1", "C6.1", "ctl"),
+            ("FG", "R35.2", "D11.1", "ctl"), ("@", "D11.1", "D11.2", "ctl"),
             ("V12F", "U3.4", "D5.1", "ctl"), ("V12F", "U3.4", "R33.1", "ctl"), ("V12F", "U3.4", "C5.1", "ctl")],
  "arm": [("V5", "C2.1", "R9.1", "ctl"), ("@", "R9.1", "R9.2", "sig"), ("RIN", "R9.2", "J4.1", "sig"), ("ROUT", "J4.2", "Q7.1", "sig"),
          ("@", "Q7.1", "Q7.3", "sig"), ("ARM", "Q7.3", "R15.1", "sig"), ("@", "R15.1", "R15.2", "sig"), ("EN", "R15.2", "C7.1", "sig"),
@@ -322,7 +328,7 @@ LEGS = {
           ("@", "R17.1", "R17.2", "ctl"), ("NARM", "R17.2", "R18.1", "ctl"), ("@", "R18.1", "R18.2", "ctl"), ("QDB", "R18.2", "Q9.2", "ctl"),
           ("EN", "C7.1", "U2.5", "ctl")]
          + [x for i in range(1, 5) for x in ((f"G{i}", f"Q{i}.1", f"RG{i}.1", "sig"), ("@", f"RG{i}.1", f"RG{i}.2", "sig"), ("FG", f"RG{i}.2", "Q12.3", "sig"))]
-         + [("FG", "C6.1", "Q12.3", "sig"), ("@", "Q12.3", "Q12.1", "sig"), ("QOC", "Q12.1", "R36.1", "sig"), ("@", "R36.1", "R36.2", "sig"),
+         + [("FGC", "C6.1", "R39.1", "sig"), ("@", "R39.1", "R39.2", "sig"), ("FG", "R39.2", "Q12.3", "sig"), ("@", "Q12.3", "Q12.1", "sig"), ("QOC", "Q12.1", "R36.1", "sig"), ("@", "R36.1", "R36.2", "sig"),
             ("SRC", "R36.2", "RK2.2", "sig"), ("@", "RK2.2", "RK2.1", "sig"),
             ("@", "R34.1", "R34.2", "ctl"), ("DRV", "U4.3", "R38.2", "ctl"), ("@", "R38.2", "R38.1", "ctl"), ("QOD", "R38.1", "D6.1", "ctl"),
             ("@", "D6.1", "D6.2", "ctl"), ("QOB", "D6.2", "Q12.2", "ctl")],
@@ -334,6 +340,7 @@ LEGS = {
 WIDTH = {"main": 2.6, "ret": 2.6, "sig": 0.9, "ctl": 0.5}           # pour routes keep this far from the copper edge (half ribbon)
 
 def padxy(b, ref):
+    if isinstance(ref, (list, tuple)): return [float(ref[0]), float(ref[1])]
     r, n = ref.split(".")
     ps = [p for p in b.FindFootprintByReference(r).Pads() if p.GetNumber() == n]
     big = max(ps, key=lambda p: p.GetSize().x * p.GetSize().y)
@@ -342,8 +349,10 @@ def padxy(b, ref):
 def paths(b):
     graphs, pours, out, missing = {}, {}, {}, []
     for pid, legs in LEGS.items():
-        lines = []
+        lines, vias = [], []
         for leg in legs:
+            if leg[0] == "=":
+                lines.append({"l": leg[1], "s": leg[3], "p": [[round(x, 2), round(y, 2)] for x, y in leg[2]], "wire": 1}); continue
             if leg[0].startswith("~"):
                 net, layer, a, c, st = leg[0][1:], leg[1], leg[2], leg[3], leg[4]
                 pm = pours.get((net, layer)) or pours.setdefault((net, layer), PourMap(b, net, layer))
@@ -357,8 +366,22 @@ def paths(b):
                 missing.append(f"{pid}: {net} {a}->{c}")
                 lines.append({"l": 0, "s": st, "p": [padxy(b, a), padxy(b, c)], "gap": 1}); continue
             for L, pts in runs: lines.append({"l": L, "s": st, "p": [[round(x, 3), round(y, 3)] for x, y in pts]})
-        out[pid] = lines
+            for (L0, p0), (L1, p1) in zip(runs, runs[1:]):
+                if L0 != L1: vias.append([round(p1[0][0], 3), round(p1[0][1], 3)])
+        out[pid] = {"lines": lines, "vias": vias}
     if missing: print("legs with no copper found (drawn straight):", missing)
+    return out
+
+def wires(b):
+    """The bare-copper strips (rectangles on F.Mask / B.Mask) carry a soldered 12 AWG wire: one straight piece
+    along the long axis of each strip, [layer, x0, y0, x1, y1]."""
+    out = []
+    for d in b.GetDrawings():
+        if d.GetLayer() not in (pcbnew.F_Mask, pcbnew.B_Mask): continue
+        bb = d.GetBoundingBox(); x0, y0, x1, y1 = mm(bb.GetLeft()) - OX, mm(bb.GetTop()) - OY, mm(bb.GetRight()) - OX, mm(bb.GetBottom()) - OY
+        L = 0 if d.GetLayer() == pcbnew.F_Mask else 1
+        if x1 - x0 >= y1 - y0: out.append([L, round(x0 + 0.3, 2), round((y0 + y1) / 2, 2), round(x1 - 0.3, 2), round((y0 + y1) / 2, 2)])
+        else: out.append([L, round((x0 + x1) / 2, 2), round(y0 - 0.5, 2), round((x0 + x1) / 2, 2), round(y1 - 0.3, 2)])
     return out
 
 def write(b):
@@ -367,12 +390,13 @@ def write(b):
           f"const BW = {W:g}, BH = {H:g};\n"
           f"const PARTS = {json.dumps(data['PARTS'], separators=(',', ':'))};\n"
           f"const PATHS = {json.dumps(data['PATHS'], separators=(',', ':'))};\n"
+          f"const WIRES = {json.dumps(wires(b), separators=(',', ':'))};\n"
           "/* ---------- end generated ---------- */")
     t = open(HTML).read()
     t, n = re.subn(r"/\* ---------- generated by make_3d_data\.py.*?/\* ---------- end generated ---------- \*/", lambda m: js, t, count=1, flags=re.S)
     if n != 1: raise SystemExit("generated block not found in index.html")
     open(HTML, "w").write(t)
-    print("PARTS", len(data["PARTS"]), "PATHS", {k: sum(len(l["p"]) for l in v) for k, v in data["PATHS"].items()})
+    print("PARTS", len(data["PARTS"]), "PATHS", {k: sum(len(l["p"]) for l in v["lines"]) for k, v in data["PATHS"].items()})
 
 if __name__ == "__main__":
     board = pcbnew.LoadBoard(PCB)

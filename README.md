@@ -50,7 +50,7 @@ What this medium version leaves out (to keep it at 95 parts): under- and over-vo
 | Magnet in with the ESC side shorted | never turns on; 0.29 J in the pre-charge resistors |
 | Battery spike when killing 60 A | 17.7 V peak on 4S, 26.1 V on 6S |
 
-All 15 scenarios: [`kicad/simulation/summary_tht.md`](kicad/simulation/summary_tht.md). Magnet field, sensor placement and plug retention: [`calc/report.md`](calc/report.md).
+All 15 scenarios: [`kicad/simulation/summary_tht.md`](kicad/simulation/summary_tht.md). Final run on the finished board, worst-case optocoupler and the board's own copper (loss, current sharing, bare strips for a 12 AWG wire): [`SIMULATION_RESULT.md`](SIMULATION_RESULT.md). Magnet field, sensor placement and plug retention: [`calc/report.md`](calc/report.md).
 
 ## Buying (through-hole board)
 

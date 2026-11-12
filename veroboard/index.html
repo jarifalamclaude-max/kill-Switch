@@ -1,3 +1,158 @@
+<title>Kill Switch Veroboard</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one workbench. Tabs on top, a pan/zoom drawing surface, and a details strip under it. */
+:root{
+  --bg:#f3f1ec; --panel:#fbfaf7; --fg:#1f2421; --muted:#5d665f; --line:#d3d0c6; --accent:#0f6b5c; --accent-fg:#ffffff;
+  --board:#d2ad6c; --board-edge:#a8854a; --hole:#5b4320; --copper:#c8791f; --body:#2b2f2c; --body-fill:rgba(40,44,41,.16);
+  --sch-wire:#1f2421; --sch-sym:#0b4f8a; --sch-val:#5d665f; --sch-net:#b3261e; --sch-bg:#fbfaf7;
+  --dim:.13;
+  --f-display:"Space Grotesk",system-ui,sans-serif; --f-body:"Inter",system-ui,sans-serif; --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#151816; --panel:#1d211e; --fg:#e8ebe6; --muted:#9aa49c; --line:#343a35; --accent:#4fc3ad; --accent-fg:#0c1512;
+  --board:#8a6a36; --board-edge:#5f4822; --hole:#2a1f0e; --copper:#e09a3e; --body:#e8ebe6; --body-fill:rgba(0,0,0,.28);
+  --sch-wire:#e8ebe6; --sch-sym:#7fbcf5; --sch-val:#9aa49c; --sch-net:#ff8a80; --sch-bg:#1d211e; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#151816; --panel:#1d211e; --fg:#e8ebe6; --muted:#9aa49c; --line:#343a35; --accent:#4fc3ad; --accent-fg:#0c1512;
+  --board:#8a6a36; --board-edge:#5f4822; --hole:#2a1f0e; --copper:#e09a3e; --body:#e8ebe6; --body-fill:rgba(0,0,0,.28);
+  --sch-wire:#e8ebe6; --sch-sym:#7fbcf5; --sch-val:#9aa49c; --sch-net:#ff8a80; --sch-bg:#1d211e; color-scheme:dark }
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
+.wrap{max-width:1200px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+h1{font-family:var(--f-display);font-size:1.6rem;margin:0;text-wrap:balance}
+.sub{color:var(--muted);margin:0;max-width:70ch}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tabs button,.tools button{font:600 14px var(--f-body);border:1px solid var(--line);background:var(--panel);color:var(--fg);padding:8px 14px;border-radius:8px;cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.spreadbar{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;margin:0 0 8px;font:600 14px var(--f-body)}
+.spreadbar input{width:min(52vw,260px);accent-color:var(--accent)}
+.spreadbar output{font:600 13px var(--f-mono);min-width:44px}
+.spreadbar .muted{font:13px var(--f-body);color:var(--muted)}
+.stage{position:relative;border:1px solid var(--line);border-radius:10px;background:var(--panel);overflow:hidden;height:min(68vh,640px);min-height:380px}
+.stage svg{width:100%;height:100%;display:block;touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none}
+.tools{position:absolute;right:10px;top:10px;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.tools button{padding:6px 11px;min-width:38px}
+.zoom{position:absolute;right:10px;bottom:8px;display:flex;align-items:center;gap:8px;font:600 12px var(--f-body);color:var(--muted);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:5px 10px;max-width:calc(100% - 20px)}
+.zoom input{width:min(46vw,260px);accent-color:var(--accent);touch-action:pan-x}
+.zoom output{font:12px var(--f-mono);min-width:44px;text-align:right;font-variant-numeric:tabular-nums}
+.stage .hint{bottom:50px}
+.hint{position:absolute;left:10px;bottom:8px;font-size:12px;color:var(--muted);background:var(--panel);padding:2px 8px;border-radius:6px;border:1px solid var(--line)}
+.info{border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:12px 14px;min-height:64px}
+.info h2{font-family:var(--f-display);font-size:1.05rem;margin:0 0 4px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.info p{margin:0 0 6px;color:var(--muted)}
+.sw{display:inline-block;width:14px;height:14px;border-radius:3px}
+.pads{display:flex;flex-wrap:wrap;gap:6px;margin:0;padding:0;list-style:none}
+.pads li{font:13px var(--f-mono);border:1px solid var(--line);border-radius:6px;padding:2px 7px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{font:600 12px var(--f-mono);border:1px solid var(--line);background:var(--panel);color:var(--fg);padding:4px 9px;border-radius:999px;cursor:pointer;display:flex;align-items:center;gap:6px}
+.chips button[aria-pressed="true"]{border-color:var(--fg);box-shadow:inset 0 0 0 1px var(--fg)}
+.tblwrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{padding:7px 10px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font:600 12px var(--f-body);text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+td.m{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+h3{font-family:var(--f-display);font-size:1.1rem;margin:10px 0 0}
+.notes{margin:0;padding-left:20px;max-width:75ch}.notes li{margin:4px 0}
+/* board drawing */
+.vb-hole{fill:var(--hole)} .vb-ring{fill:var(--copper);opacity:.45}
+.vb-body{fill:var(--body-fill);stroke:var(--body);stroke-width:1.2}
+.vb-lead{stroke:var(--body);stroke-width:1.6;opacity:.7}
+.vb-ref{font:600 8.5px var(--f-mono);fill:var(--body);text-anchor:middle;pointer-events:none}
+.vb-val{font:7px var(--f-mono);fill:var(--body);text-anchor:middle;opacity:.85;pointer-events:none}
+.vb-axis{font:7.5px var(--f-mono);fill:var(--muted);text-anchor:middle}
+.vb-pin{font:600 6px var(--f-mono);fill:#fff;text-anchor:middle;pointer-events:none}
+.vb-wire{fill:none;stroke-linecap:round;cursor:pointer}
+.dimmed{opacity:var(--dim)}
+/* schematic */
+.s-w{stroke:var(--sch-wire);stroke-width:1.6;fill:none;stroke-linecap:round}
+.s-y{stroke:var(--sch-sym);stroke-width:1.8;fill:none;stroke-linejoin:round;stroke-linecap:round}
+.s-f{fill:var(--sch-sym);stroke:var(--sch-sym);stroke-width:1}
+.s-d{fill:var(--sch-wire)}
+.s-r{font:600 12px var(--f-mono);fill:var(--sch-sym)}
+.s-v{font:11px var(--f-mono);fill:var(--sch-val)}
+.s-n{font:600 12px var(--f-mono);fill:var(--sch-net)}
+.s-t{font:700 13px var(--f-display);fill:var(--sch-val);letter-spacing:.06em;text-transform:uppercase}
+.s-p{font:9px var(--f-mono);fill:var(--sch-val)}
+.s-box{fill:none;stroke:var(--sch-sym);stroke-width:1.8}
+</style>
+<style>
+:root{--cu-core:#f7d9a6;--warn-bg:#fff3e2;--warn-line:#e9a94f;--warn-fg:#8f4300}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){--cu-core:#ffe4b5;--warn-bg:#2a2013;--warn-line:#7d5520;--warn-fg:#ffb35c} }
+:root[data-theme="dark"]{--cu-core:#ffe4b5;--warn-bg:#2a2013;--warn-line:#7d5520;--warn-fg:#ffb35c}
+.warn{border:1px solid var(--warn-line);background:var(--warn-bg);border-radius:10px;padding:10px 14px;margin:0;max-width:75ch}
+.warn b{color:var(--warn-fg)}
+.vb-run{fill:none;stroke-linecap:round;stroke-linejoin:round;cursor:pointer}
+.vb-core{fill:none;stroke:var(--cu-core);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
+.vb-plug{fill:var(--body-fill);stroke:var(--body);stroke-width:1.4}
+.vb-name{font:600 6.5px var(--f-mono);fill:var(--body);text-anchor:middle;pointer-events:none}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--muted);margin:2px 0 0}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{display:inline-block;width:26px;border-top-style:solid;border-color:var(--fg)}
+td.w{white-space:normal;min-width:16ch}
+.s-j{fill:var(--sch-wire)}
+.s-tp{fill:var(--sch-bg);stroke:var(--sch-sym);stroke-width:1.6}
+.s-bgr{fill:var(--sch-bg)}
+</style>
+<div class="wrap">
+  <h1>Magnetic kill switch on perfboard</h1>
+  <p class="sub">The through-hole kill switch (4S–6S LiPo, 30 A continuous, 60 A burst) laid out on dot perfboard. Tap any pad, wire or net name to light up everything joined to it. Use the slider to zoom and drag to move. Parts, holes and nets come from the KiCad board ks_tht.kicad_pcb (make_vero_data.py), so the wiring matches the PCB exactly.</p>
+  <p class="warn"><b>30–60 A must never flow through perfboard pads or thin wire.</b> The thick copper lines are bare 12 AWG (or 2.5 mm²) wire runs soldered along the pads. The MOSFET legs and the XT60 pigtail leads are soldered straight to them. Put a 40 A fuse in the battery + lead.</p>
+  <div class="tabs" role="tablist">
+    <button role="tab" id="tab-board" aria-selected="true" data-tab="board">Perfboard</button>
+    <button role="tab" id="tab-sch" aria-selected="false" data-tab="sch">Schematic</button>
+    <button role="tab" id="tab-list" aria-selected="false" data-tab="list">Wire list and parts</button>
+  </div>
+
+  <section id="pane-board">
+    <div class="spreadbar"><label for="spread">Spacing between parts</label><input type="range" id="spread" min="1" max="2.5" step="0.25" value="1"><output id="spreadv">1×</output><span id="vbSize" class="muted"></span></div>
+    <div class="stage"><svg id="vbSvg" aria-label="Perfboard layout"></svg>
+      <div class="tools"><button id="flipBtn" type="button">Show solder side</button><button data-z="fit" data-for="vb" type="button">Fit</button></div>
+      <label class="zoom"><span>Zoom</span><input type="range" id="zoom-vb" min="-25" max="100" step="1" value="0" aria-label="Zoom perfboard"><output id="zoomv-vb">100%</output></label>
+      <div class="hint" id="sideHint">Component side</div>
+    </div>
+    <p class="legend"><span><i style="border-top-width:6px;border-color:#c8791f"></i>bare 12 AWG run</span><span><i style="border-top-width:3px"></i>20 AWG insulated</span><span><i style="border-top-width:1.5px"></i>thin insulated wire</span></p>
+  </section>
+  <section id="pane-sch" hidden>
+    <div class="stage"><svg id="schSvg" aria-label="Schematic"></svg>
+      <div class="tools"><button data-z="fit" data-for="sch" type="button">Fit</button></div>
+      <label class="zoom"><span>Zoom</span><input type="range" id="zoom-sch" min="-25" max="100" step="1" value="0" aria-label="Zoom schematic"><output id="zoomv-sch">100%</output></label>
+    </div>
+  </section>
+  <section id="pane-list" hidden>
+    <h3>Bare 12 AWG runs (main current)</h3>
+    <div class="tblwrap"><table id="runTbl"></table></div>
+    <h3>Wires to solder</h3>
+    <div class="tblwrap"><table id="wireTbl"></table></div>
+    <h3>Parts</h3>
+    <div class="tblwrap"><table id="bomTbl"></table></div>
+  </section>
+
+  <div class="info" id="info" aria-live="polite"></div>
+  <div class="chips" id="chips"></div>
+
+  <h3>Before you solder</h3>
+  <ul class="notes">
+    <li>Drawn for dot perfboard (one pad per hole, 2.54 mm). The board size for the chosen spacing is shown above the drawing. All wiring is on the solder side. Thin insulated wires may cross each other and the runs; bare runs must touch nothing but their own pads.</li>
+    <li><b>Main current:</b> VIN (battery +), VOUT (to the ESCs) and GND carry 30 A, 60 A in bursts. Lay bare tinned 12 AWG (or 2.5 mm²) copper wire flat on the solder side along the drawn path and solder it to every pad it passes; solder each MOSFET drain and source straight to it. The page keeps an empty hole between runs of different nets. Afterwards, check every run against its neighbours for solder bridges with a multimeter.</li>
+    <li><b>XT60:</b> the board-mount XT60 pins do not fit 2.54 mm holes. Use XT60 pigtails with 12 AWG leads: male at J1 (battery side), female at J2 (ESC side). Lay each stripped lead 10–15 mm along the end of its run and solder it there. 12 AWG does not go through a 1 mm hole, so hold each lead down with a cable tie through two holes.</li>
+    <li><b>Fuse:</b> put a 40 A fuse (blade or MIDI) in the battery + lead before J1. The board turns off a hard short in under 0.5 ms; a long overload is the fuse's job.</li>
+    <li>Medium lines (TVS diodes D1 and D2, the pre-charge path through Q5, F1, R3 and R4) see a few amps for a moment: use short 20 AWG (0.5 mm²) insulated wire. Everything else is signal wire (30 AWG wire-wrap or thin hookup wire).</li>
+    <li><b>Pin order</b> (printed or flat face toward you, legs down): IRFB3206 and IRF9540N G-D-S; the tab is the drain, so all four main tabs are VIN. Let them touch each other but nothing else. The L7805CV lies flat on its tab: IN-GND-OUT. 2N7000: S-G-D. 2N3904 and 2N3906: E-B-C. BC327: C-B-E. In the drawing the flat face of each TO-92 points to the bottom edge. PC817 and LM339N: pin 1 at the dot (use a socket for the LM339N).</li>
+    <li>D3, D6 and D10 stand up with the cathode (band) lead on top. Check every diode band and both electrolytic polarities against the K and + marks.</li>
+    <li><b>B0512S:</b> check the pin order of your module against its datasheet. This board uses 1 GND, 2 Vin, 3 0 V, 4 +Vo. Its output floats on VOUT: SRC (0 V) joins VOUT only through RK2.</li>
+    <li>C11 must be a 3.3 µF X7R ceramic (an electrolytic's leakage upsets the abort ramp). C6 is a 220 nF film capacitor. R21, R22, R24 and R25 should be 1 % metal film.</li>
+    <li><b>Sensors:</b> check the KY-003 pins (S, +, −) with a multimeter, because some clones swap + and −. Check with a multimeter that the MC-38 closes when the magnet is near: listings disagree on normally open and normally closed. Mount the magnet with its south pole toward the hull, because the A3144 only reacts to a south pole on its printed face.</li>
+    <li><b>First power-up:</b> use a current-limited bench supply (12–16 V, 0.3 A limit), no ESC, magnet out: all LEDs off. Magnet in: both blue LEDs light, then about 1 s later the red LIVE LED, and VOUT follows VIN. Pull the magnet: LIVE goes off at once. Only then try the battery with one ESC, then full current.</li>
+  </ul>
+</div>
+
+<script>
+(function(){
+const NS='http://www.w3.org/2000/svg';
+function el(tag,attrs,parent,text){const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);if(text!=null)e.textContent=text;if(parent)parent.appendChild(e);return e;}
 /* ---------- generated by make_vero_data.py from ../kicad/ks_tht.kicad_pcb ---------- */
 const NETS={"VIN": {"c": "#d32f2f", "d": "Battery + from the battery-side XT60 pigtail (J1): drains and tabs of Q1–Q4, source of the pre-charge FET Q5"}, "VOUT": {"c": "#ef6c00", "d": "Switched + to the ESCs (J2 pigtail): sources of Q1–Q4, pre-charge resistors, TVS D2"}, "GND": {"c": "#111111", "d": "Battery minus: J1 to J2 through the board, and the ground of all the logic"}, "VIN_K": {"c": "#e57373", "d": "VIN for the logic, through the 0 Ω link RK1: 7805 input diode, VIN divider and ramp"}, "SRC": {"c": "#ffa726", "d": "VOUT for the gate drive, through the 0 Ω link RK2: 0 V of the floating 12 V supply, VOUT divider"}, "G1": {"c": "#7b1fa2", "d": "Q1 gate (after its 10 Ω resistor RG1; RS1 1 MΩ to the source)"}, "G2": {"c": "#8e24aa", "d": "Q2 gate (RG2 10 Ω, RS2 1 MΩ)"}, "G3": {"c": "#9c27b0", "d": "Q3 gate (RG3 10 Ω, RS3 1 MΩ)"}, "G4": {"c": "#ab47bc", "d": "Q4 gate (RG4 10 Ω, RS4 1 MΩ)"}, "FG": {"c": "#6a1b9a", "d": "Gate bus: drives Q1–Q4 through RG1–RG4; R39 and C6 to GND give the soft start"}, "FGC": {"c": "#9575cd", "d": "Soft-start capacitor C6 (220 nF film to GND), joined to the gate bus through R39 100 Ω"}, "PCG": {"c": "#00838f", "d": "Pre-charge P-FET Q5 gate: R1 47 kΩ and the 12 V zener D3 to VIN"}, "PCD": {"c": "#00acc1", "d": "Q5 drain to the PTC F1"}, "PCF": {"c": "#26c6da", "d": "PTC F1 to the two 22 Ω 2 W resistors R3, R4"}, "PCDN": {"c": "#006064", "d": "Q6 drain: pulls the Q5 gate down through R2 22 kΩ, which starts the pre-charge"}, "PCEN": {"c": "#2e7d32", "d": "Pre-charge enable: LM339 outputs 1 and 2 (wired), pulled up by R29; drives Q6 and Q10"}, "VR1": {"c": "#b71c1c", "d": "After the reverse-polarity diode D4"}, "VR2": {"c": "#c62828", "d": "7805 input, after R5 10 Ω and C1 47 µF"}, "V5": {"c": "#e53935", "d": "5 V logic supply from the 7805 (U1)"}, "REF": {"c": "#f06292", "d": "2.5 V reference: V5 halved by R6 / R7"}, "HALL": {"c": "#1e88e5", "d": "KY-003 output S: low while the magnet is in"}, "V5S": {"c": "#42a5f5", "d": "5 V for the Hall module, through R8 100 Ω"}, "RIN": {"c": "#0277bd", "d": "Reed contact input: V5 through R9 100 Ω"}, "ROUT": {"c": "#0288d1", "d": "Reed contact output: 5 V while the magnet holds the reed closed"}, "QAB": {"c": "#64b5f6", "d": "Q7 base: pulled down to HALL through R10, up to ROUT through R11"}, "ARM": {"c": "#1565c0", "d": "Armed: Q7 passes ROUT only while the Hall sensor also sees the magnet"}, "HLA": {"c": "#90caf9", "d": "HALL LED (D7) anode"}, "RLA": {"c": "#81d4fa", "d": "REED LED (D8) anode"}, "EN": {"c": "#00897b", "d": "Arm delay: ARM charges it through R15 100 kΩ into C7 10 µF (about 0.8 s); Q9 empties it in about 1.5 ms"}, "QIB": {"c": "#4db6ac", "d": "Q8 base (from ARM through R16)"}, "NARM": {"c": "#283593", "d": "Not armed: Q8 collector, high when ARM is low"}, "QDB": {"c": "#5c6bc0", "d": "Q9 base (from NARM through R18)"}, "QDC": {"c": "#3949ab", "d": "Q9 collector, to EN through R20 220 Ω"}, "RAMP": {"c": "#558b2f", "d": "Abort ramp: VIN_K through R26 1 MΩ into C11 3.3 µF, reset through R28 while EN is low"}, "VOD": {"c": "#827717", "d": "VOUT divider: SRC / 8.5 (R21 / R22) plus a small offset from R23"}, "VIND": {"c": "#9e9d24", "d": "VIN divider: VIN_K / 17 (R24 / R25)"}, "RRST": {"c": "#33691e", "d": "LM339 output 4: empties the ramp through R28 while EN is below 2.5 V"}, "DONE": {"c": "#43a047", "d": "LM339 output 3: high when VOUT is above half of VIN (pre-charge finished)"}, "QGM": {"c": "#795548", "d": "Between Q10 and Q11 (the two 2N7000 in series form an AND gate)"}, "CATH": {"c": "#6d4c41", "d": "Cathodes of the LIVE LED and of the gate-drive opto LED: pulled low when PCEN and DONE are both high"}, "LVA": {"c": "#ff5252", "d": "LIVE LED (D9) anode"}, "UGA": {"c": "#ad1457", "d": "Gate-drive opto U4 LED anode (V5 through R32 330 Ω)"}, "V12F": {"c": "#c2185b", "d": "Floating +12 V from the B0512S (U3), measured from SRC"}, "DRV": {"c": "#d81b60", "d": "Opto U4 emitter: the gate-drive output (R34 22 kΩ to SRC)"}, "DRVD": {"c": "#ec407a", "d": "After the steering diode D10, into R35 10 kΩ to the gate bus"}, "QOB": {"c": "#4527a0", "d": "Q12 base: fast turn-off PNP (R37 10 kΩ to FG, D6 and R38 to DRV)"}, "QOC": {"c": "#5e35b1", "d": "Q12 collector, to SRC through R36 47 Ω"}, "QOD": {"c": "#7e57c2", "d": "D6 cathode to R38 1 kΩ"}};
 const HEAVY={"VIN": ["J1.+", "Q1.D", "Q2.D", "Q3.D", "Q4.D"], "VOUT": ["Q1.S", "Q2.S", "Q3.S", "Q4.S", "J2.+"], "GND": ["J1.-", "J2.-"]};
@@ -6,3 +161,519 @@ const BASE_PARTS=[{"ref": "C1", "val": "47u 50V", "k": "elec", "p": [["+", 36, 1
 const BASE_COLS=48, BASE_ROWS=39, P=20, OFF=34;
 const PCBNET={"C1": {"val": "47u 50V", "pads": {"1": "VR2", "2": "GND"}}, "C10": {"val": "10n", "pads": {"1": "VIND", "2": "GND"}}, "C11": {"val": "3.3u X7R 50V", "pads": {"1": "RAMP", "2": "GND"}}, "C2": {"val": "10u 25V", "pads": {"1": "V5", "2": "GND"}}, "C3": {"val": "100n", "pads": {"1": "V5", "2": "GND"}}, "C4": {"val": "10u 16V", "pads": {"1": "V5", "2": "GND"}}, "C5": {"val": "22u 25V", "pads": {"1": "V12F", "2": "SRC"}}, "C6": {"val": "220n 100V film", "pads": {"1": "FGC", "2": "GND"}}, "C7": {"val": "10u 16V", "pads": {"1": "EN", "2": "GND"}}, "C8": {"val": "100n", "pads": {"1": "REF", "2": "GND"}}, "C9": {"val": "10n", "pads": {"1": "VOD", "2": "GND"}}, "D1": {"val": "1.5KE33A", "pads": {"1": "VIN", "2": "GND"}}, "D10": {"val": "1N4148", "pads": {"1": "DRVD", "2": "DRV"}}, "D11": {"val": "P6KE18A", "pads": {"1": "FG", "2": "SRC"}}, "D2": {"val": "1.5KE33A", "pads": {"1": "VOUT", "2": "GND"}}, "D3": {"val": "BZX55C12", "pads": {"1": "VIN", "2": "PCG"}}, "D4": {"val": "1N4007", "pads": {"1": "VR1", "2": "VIN_K"}}, "D5": {"val": "1N4744A", "pads": {"1": "V12F", "2": "SRC"}}, "D6": {"val": "1N4148", "pads": {"1": "QOD", "2": "QOB"}}, "D7": {"val": "blue HALL", "pads": {"1": "HALL", "2": "HLA"}}, "D8": {"val": "blue REED", "pads": {"1": "GND", "2": "RLA"}}, "D9": {"val": "red LIVE", "pads": {"1": "CATH", "2": "LVA"}}, "F1": {"val": "RXEF050 (0.5 A, 72 V)", "pads": {"1": "PCD", "2": "PCF"}}, "J1": {"val": "XT60 BATTERY IN", "pads": {"1": "GND", "2": "VIN"}}, "J2": {"val": "XT60 TO ESCs", "pads": {"1": "GND", "2": "VOUT"}}, "J3": {"val": "HALL MODULE (KY-003: S + -)", "pads": {"1": "HALL", "2": "V5S", "3": "GND"}}, "J4": {"val": "REED (MC-38)", "pads": {"1": "RIN", "2": "ROUT"}}, "Q1": {"val": "IRFB3206", "pads": {"1": "G1", "2": "VIN", "3": "VOUT"}}, "Q10": {"val": "2N7000", "pads": {"1": "GND", "2": "PCEN", "3": "QGM"}}, "Q11": {"val": "2N7000", "pads": {"1": "QGM", "2": "DONE", "3": "CATH"}}, "Q12": {"val": "BC327", "pads": {"1": "QOC", "2": "QOB", "3": "FG"}}, "Q2": {"val": "IRFB3206", "pads": {"1": "G2", "2": "VIN", "3": "VOUT"}}, "Q3": {"val": "IRFB3206", "pads": {"1": "G3", "2": "VIN", "3": "VOUT"}}, "Q4": {"val": "IRFB3206", "pads": {"1": "G4", "2": "VIN", "3": "VOUT"}}, "Q5": {"val": "IRF9540N", "pads": {"1": "PCG", "2": "PCD", "3": "VIN"}}, "Q6": {"val": "2N7000", "pads": {"1": "GND", "2": "PCEN", "3": "PCDN"}}, "Q7": {"val": "2N3906", "pads": {"1": "ROUT", "2": "QAB", "3": "ARM"}}, "Q8": {"val": "2N3904", "pads": {"1": "GND", "2": "QIB", "3": "NARM"}}, "Q9": {"val": "2N3904", "pads": {"1": "GND", "2": "QDB", "3": "QDC"}}, "R1": {"val": "47k", "pads": {"1": "VIN", "2": "PCG"}}, "R10": {"val": "10k", "pads": {"1": "QAB", "2": "HALL"}}, "R11": {"val": "47k", "pads": {"1": "ROUT", "2": "QAB"}}, "R12": {"val": "4.7k", "pads": {"1": "ARM", "2": "GND"}}, "R13": {"val": "1k", "pads": {"1": "V5S", "2": "HLA"}}, "R14": {"val": "1k", "pads": {"1": "ROUT", "2": "RLA"}}, "R15": {"val": "100k", "pads": {"1": "ARM", "2": "EN"}}, "R16": {"val": "10k", "pads": {"1": "ARM", "2": "QIB"}}, "R17": {"val": "10k", "pads": {"1": "V5", "2": "NARM"}}, "R18": {"val": "10k", "pads": {"1": "NARM", "2": "QDB"}}, "R19": {"val": "100k", "pads": {"1": "QDB", "2": "GND"}}, "R2": {"val": "22k", "pads": {"1": "PCG", "2": "PCDN"}}, "R20": {"val": "220", "pads": {"1": "QDC", "2": "EN"}}, "R21": {"val": "75k 1%", "pads": {"1": "SRC", "2": "VOD"}}, "R22": {"val": "10k 1%", "pads": {"1": "VOD", "2": "GND"}}, "R23": {"val": "470k", "pads": {"1": "V5", "2": "VOD"}}, "R24": {"val": "160k 1%", "pads": {"1": "VIN_K", "2": "VIND"}}, "R25": {"val": "10k 1%", "pads": {"1": "VIND", "2": "GND"}}, "R26": {"val": "1M", "pads": {"1": "VIN_K", "2": "RAMP"}}, "R27": {"val": "68k", "pads": {"1": "RAMP", "2": "GND"}}, "R28": {"val": "1k", "pads": {"1": "RAMP", "2": "RRST"}}, "R29": {"val": "10k", "pads": {"1": "V5", "2": "PCEN"}}, "R3": {"val": "22 2W", "pads": {"1": "PCF", "2": "VOUT"}}, "R30": {"val": "10k", "pads": {"1": "V5", "2": "DONE"}}, "R31": {"val": "1k", "pads": {"1": "V5", "2": "LVA"}}, "R32": {"val": "330", "pads": {"1": "V5", "2": "UGA"}}, "R33": {"val": "4.7k", "pads": {"1": "V12F", "2": "SRC"}}, "R34": {"val": "22k", "pads": {"1": "DRV", "2": "SRC"}}, "R35": {"val": "10k", "pads": {"1": "DRVD", "2": "FG"}}, "R36": {"val": "47", "pads": {"1": "QOC", "2": "SRC"}}, "R37": {"val": "10k", "pads": {"1": "FG", "2": "QOB"}}, "R38": {"val": "1k", "pads": {"1": "QOD", "2": "DRV"}}, "R39": {"val": "100", "pads": {"1": "FGC", "2": "FG"}}, "R4": {"val": "22 2W", "pads": {"1": "PCF", "2": "VOUT"}}, "R5": {"val": "10", "pads": {"1": "VR1", "2": "VR2"}}, "R6": {"val": "10k", "pads": {"1": "V5", "2": "REF"}}, "R7": {"val": "10k", "pads": {"1": "REF", "2": "GND"}}, "R8": {"val": "100", "pads": {"1": "V5", "2": "V5S"}}, "R9": {"val": "100", "pads": {"1": "V5", "2": "RIN"}}, "RG1": {"val": "10", "pads": {"1": "G1", "2": "FG"}}, "RG2": {"val": "10", "pads": {"1": "G2", "2": "FG"}}, "RG3": {"val": "10", "pads": {"1": "G3", "2": "FG"}}, "RG4": {"val": "10", "pads": {"1": "G4", "2": "FG"}}, "RK1": {"val": "0R", "pads": {"1": "VIN", "2": "VIN_K"}}, "RK2": {"val": "0R", "pads": {"1": "VOUT", "2": "SRC"}}, "RS1": {"val": "1M", "pads": {"1": "G1", "2": "VOUT"}}, "RS2": {"val": "1M", "pads": {"1": "G2", "2": "VOUT"}}, "RS3": {"val": "1M", "pads": {"1": "G3", "2": "VOUT"}}, "RS4": {"val": "1M", "pads": {"1": "G4", "2": "VOUT"}}, "TP1": {"val": "FG", "pads": {"1": "FG"}}, "TP2": {"val": "EN", "pads": {"1": "EN"}}, "TP3": {"val": "V5", "pads": {"1": "V5"}}, "TP4": {"val": "GND", "pads": {"1": "GND"}}, "U1": {"val": "L7805CV", "pads": {"1": "VR2", "2": "GND", "3": "V5"}}, "U2": {"val": "LM339N", "pads": {"1": "PCEN", "2": "PCEN", "3": "V5", "4": "REF", "5": "EN", "6": "RAMP", "7": "VOD", "8": "VIND", "9": "VOD", "10": "REF", "11": "EN", "12": "GND", "13": "RRST", "14": "DONE"}}, "U3": {"val": "B0512S-1WR3", "pads": {"1": "GND", "2": "V5", "3": "SRC", "4": "V12F"}}, "U4": {"val": "PC817", "pads": {"1": "UGA", "2": "CATH", "3": "DRV", "4": "V12F"}}};
 /* ---------- end generated ---------- */
+const rowName=r=>r<26?String.fromCharCode(65+r):'A'+String.fromCharCode(65+r-26);
+const holeName=(c,r)=>rowName(r)+(c+1);
+
+/* ---------- spacing: spread the parts apart, keep each part's own pin pattern ---------- */
+let PARTS=BASE_PARTS, COLS=BASE_COLS, ROWS=BASE_ROWS, SPREAD=1;
+function layoutParts(f){
+  if(f<=1) return {parts:BASE_PARTS, cols:BASE_COLS, rows:BASE_ROWS};
+  const occ=new Set(), res=[];
+  const order=BASE_PARTS.map((p,i)=>i).sort((a,b)=>BASE_PARTS[b].p.length-BASE_PARTS[a].p.length);
+  for(const i of order){
+    const pt=BASE_PARTS[i], cs=pt.p.map(q=>q[1]), rs=pt.p.map(q=>q[2]);
+    const c0=Math.min(...cs), c1=Math.max(...cs), r0=Math.min(...rs), r1=Math.max(...rs);
+    const dx=Math.round((c0+c1)/2*f-(c0+c1)/2), dy=Math.round((r0+r1)/2*f-(r0+r1)/2);
+    const cells=(ox,oy)=>{const s=[]; for(let c=c0+ox;c<=c1+ox;c++)for(let r=r0+oy;r<=r1+oy;r++)s.push(c+','+r); return s;};
+    let best=null;
+    search: for(let rad=0;rad<=6;rad++) for(let a=-rad;a<=rad;a++) for(const b of new Set([rad-Math.abs(a),Math.abs(a)-rad])){
+      const ox=dx+a, oy=dy+b; if(c0+ox<1||r0+oy<1) continue;
+      const cl=cells(ox,oy); if(cl.every(k=>!occ.has(k))){ best=[ox,oy,cl]; break search; } }
+    if(!best) best=[dx,dy,cells(dx,dy)];
+    best[2].forEach(k=>occ.add(k));
+    res[i]=Object.assign({},pt,{p:pt.p.map(q=>[q[0],q[1]+best[0],q[2]+best[1],q[3]])});
+  }
+  const all=res.flatMap(p=>p.p);
+  return {parts:res, cols:Math.max(...all.map(q=>q[1]))+2, rows:Math.max(...all.map(q=>q[2]))+2};
+}
+
+
+/* ---------- wires: bare 12 AWG runs routed on the hole grid first, then insulated wires nearest-neighbour ---------- */
+let padsByNet={}, WIRES=[], RUNS=[], ROUTE_FAIL=[];
+const N4=[[1,0],[-1,0],[0,1],[0,-1]], HEAVY_ORDER=['VIN','VOUT','GND'];
+const ck=(c,r)=>c+','+r;
+function heap(){ const h=[];
+  return {get size(){return h.length;},
+    push(d,s){ h.push([d,s]); let i=h.length-1; while(i>0){ const p=(i-1)>>1; if(h[p][0]<=h[i][0])break; [h[p],h[i]]=[h[i],h[p]]; i=p; } },
+    pop(){ const top=h[0], last=h.pop(); if(h.length){ h[0]=last; let i=0; for(;;){ const l=2*i+1, r=l+1; let m=i;
+      if(l<h.length&&h[l][0]<h[m][0])m=l; if(r<h.length&&h[r][0]<h[m][0])m=r; if(m===i)break; [h[m],h[i]]=[h[i],h[m]]; i=m; } } return top; } }; }
+// cheapest path on the grid from any start cell to any target cell: 1 per hole, +2 per bend, +1.5 per foreign pad next to it
+function gridPath(starts,targets,okCell,extra){
+  const W=COLS, dist=new Float64Array(W*ROWS*5).fill(Infinity), prev=new Int32Array(W*ROWS*5).fill(-1), q=heap();
+  starts.forEach(k=>{ const [c,r]=k.split(',').map(Number), s=(r*W+c)*5+4; dist[s]=0; q.push(0,s); });
+  while(q.size){
+    const [d,s]=q.pop(); if(d>dist[s])continue;
+    const cell=(s/5)|0, dir=s%5, c=cell%W, r=(cell/W)|0;
+    if(dir!==4&&targets.has(ck(c,r))){ const cells=[]; for(let t=s;t>=0;t=prev[t]){ const e=(t/5)|0; cells.push([e%W,(e/W)|0]); } return cells.reverse(); }
+    for(let k=0;k<4;k++){ const nc=c+N4[k][0], nr=r+N4[k][1]; if(!okCell(nc,nr))continue;
+      const nd=d+1+extra(nc,nr)+(dir!==4&&dir!==k?2:0), ns=(nr*W+nc)*5+k; if(nd<dist[ns]){ dist[ns]=nd; prev[ns]=s; q.push(nd,ns); } }
+  }
+  return null;
+}
+function routeHeavy(padAt){
+  const runAt=new Map();
+  for(const net of HEAVY_ORDER){
+    const ids=HEAVY[net], pads=(padsByNet[net]||[]).filter(p=>ids.includes(p.id)).sort((a,b)=>ids.indexOf(a.id)-ids.indexOf(b.id));
+    if(pads.length<2)continue;
+    const okCell=(c,r)=>{
+      if(c<0||r<0||c>=COLS||r>=ROWS)return false;
+      const k=ck(c,r), pn=padAt.get(k), rn=runAt.get(k);
+      if(pn!==undefined&&pn!==net)return false;              // another net's pad (or an unused pin)
+      if(rn!==undefined&&rn!==net)return false;              // another bare run
+      if(pn===net)return true;
+      for(const [dx,dy] of N4){ const kk=ck(c+dx,r+dy), rq=runAt.get(kk), pq=padAt.get(kk);
+        if(rq!==undefined&&rq!==net)return false;            // keep an empty hole between bare runs of different nets
+        if(pq!==undefined&&pq!==net&&HEAVY[pq])return false; } // and keep the bare wire off the other big nets' pads
+      return true; };
+    const extra=(c,r)=>{ let x=0; for(const [dx,dy] of N4){ const pq=padAt.get(ck(c+dx,r+dy)); if(pq!==undefined&&pq!==net)x+=1.5; } return x; };
+    const tree=new Set([ck(pads[0].c,pads[0].r)]); runAt.set(ck(pads[0].c,pads[0].r),net);
+    let todo=pads.slice(1);
+    while(todo.length){
+      const cells=gridPath([...tree],new Set(todo.map(p=>ck(p.c,p.r))),okCell,extra);
+      if(!cells){ ROUTE_FAIL.push(...todo); console.warn('no bare-run path for',todo.map(p=>p.id).join(' ')); break; }
+      cells.forEach(([c,r])=>{ tree.add(ck(c,r)); runAt.set(ck(c,r),net); });
+      const at=(c,r)=>(padsByNet[net]||[]).find(p=>p.c===c&&p.r===r);
+      const [c0,r0]=cells[0], [c1,r1]=cells[cells.length-1];
+      RUNS.push({net,cells,a:at(c0,r0)||{id:net+' run',c:c0,r:r0},b:at(c1,r1)});
+      todo=todo.filter(p=>!tree.has(ck(p.c,p.r)));
+    }
+  }
+  return runAt;
+}
+function buildWires(){
+  padsByNet={}; WIRES=[]; RUNS=[]; ROUTE_FAIL=[];
+  const padAt=new Map();
+  PARTS.forEach(pt=>pt.p.forEach(([n,c,r,net])=>{ padAt.set(ck(c,r),net||''); if(!net)return; (padsByNet[net]=padsByNet[net]||[]).push({id:pt.ref+'.'+n,c,r,net}); }));
+  const runAt=routeHeavy(padAt);
+  Object.keys(padsByNet).forEach(net=>{
+    const pads=padsByNet[net], d=(a,b)=>Math.hypot(a.c-b.c,a.r-b.r), done=[], todo=[];
+    runAt.forEach((n,k)=>{ if(n!==net)return; const [c,r]=k.split(',').map(Number); done.push(pads.find(p=>p.c===c&&p.r===r)||{id:net+' run',c,r,net,run:true}); });
+    pads.forEach(p=>{ if(!done.includes(p))todo.push(p); });
+    if(!done.length){ const f=todo.find(p=>MID.has(p.id))||todo[0]; done.push(f); todo.splice(todo.indexOf(f),1); }
+    const grow=(fT,fK)=>{ for(;;){ let best=null;
+      todo.forEach(t=>{ if(!fT(t))return; done.forEach(k=>{ if(!fK(k))return; const x=d(t,k); if(!best||x<best.x)best={x,t,k}; }); });
+      if(!best)break;
+      const cls=ROUTE_FAIL.includes(best.t)?'heavy':(MID.has(best.t.id)&&(MID.has(best.k.id)||best.k.run||runAt.get(ck(best.k.c,best.k.r))===net))?'mid':'thin';
+      WIRES.push({net,a:best.k,b:best.t,cls}); done.push(best.t); todo.splice(todo.indexOf(best.t),1); } };
+    // amps first: TVS and pre-charge legs go straight to the run (or to each other), then the signal pads
+    grow(t=>MID.has(t.id)||ROUTE_FAIL.includes(t),k=>MID.has(k.id)||k.run||runAt.get(ck(k.c,k.r))===net||ROUTE_FAIL.includes(k)||(HEAVY[net]||[]).includes(k.id));
+    grow(()=>true,()=>true);
+  });
+}
+// corner holes of a run (for the table and the drawing)
+function corners(cells){ const out=[cells[0]];
+  for(let i=1;i<cells.length-1;i++){ const a=cells[i-1], b=cells[i], c=cells[i+1]; if((b[0]-a[0])!==(c[0]-b[0])||(b[1]-a[1])!==(c[1]-b[1]))out.push(b); }
+  if(cells.length>1)out.push(cells[cells.length-1]); return out; }
+
+/* ---------- pan / zoom ---------- */
+function Viewer(svg,size,onTap,key){
+  const g=el('g',{},svg); let s=1,tx=0,ty=0; const pts=new Map(); let moved=0,last=null,fitS=1; const sl=document.getElementById('zoom-'+key), out=document.getElementById('zoomv-'+key);
+  const sync=()=>{const v=Math.round(25*Math.log2(s/fitS)); sl.value=v; out.textContent=Math.round(100*s/fitS)+'%';};
+  const apply=()=>g.setAttribute('transform',`translate(${tx},${ty}) scale(${s})`);
+  const fit=()=>{const r=svg.getBoundingClientRect(); if(!r.width)return; const [w,h]=size(); s=fitS=Math.min(r.width/w,r.height/h)*0.97; sync(); tx=(r.width-w*s)/2; ty=(r.height-h*s)/2; apply();};
+  const zoomAt=(f,cx,cy)=>{const ns=s*f; tx=cx-(cx-tx)*f; ty=cy-(cy-ty)*f; s=ns; apply();};
+  const loc=e=>{const r=svg.getBoundingClientRect(); return {x:e.clientX-r.left,y:e.clientY-r.top};};
+  sl.addEventListener('input',()=>{const r=svg.getBoundingClientRect(); const t=fitS*Math.pow(2,sl.value/25); zoomAt(t/s,r.width/2,r.height/2); out.textContent=Math.round(100*s/fitS)+'%';});
+  svg.addEventListener('pointerdown',e=>{svg.setPointerCapture(e.pointerId); pts.set(e.pointerId,loc(e)); moved=0; last=loc(e);});
+  svg.addEventListener('pointermove',e=>{ if(!pts.has(e.pointerId))return; const p=loc(e); pts.set(e.pointerId,p);
+    if(pts.size===1){ tx+=p.x-last.x; ty+=p.y-last.y; moved+=Math.abs(p.x-last.x)+Math.abs(p.y-last.y); last=p; apply(); } });
+  const up=e=>{ if(!pts.has(e.pointerId))return; pts.delete(e.pointerId); if(pts.size===1)last=[...pts.values()][0];
+    if(pts.size===0&&moved<7&&onTap){ const t=document.elementFromPoint(e.clientX,e.clientY); onTap(t&&t.closest?t.closest('[data-net],[data-ref]'):null); } };
+  svg.addEventListener('pointerup',up); svg.addEventListener('pointercancel',e=>{pts.delete(e.pointerId);});
+  return {g,fit};
+}
+
+/* ---------- perfboard ---------- */
+let flip=false, selNet=null;
+const vbSvg=document.getElementById('vbSvg');
+const PADX=100;                                   // room left and right of the board for the XT60 pigtails
+let BW=2*PADX+OFF*2+(COLS-1)*P, BH=OFF*2+(ROWS-1)*P;
+const vb=Viewer(vbSvg,()=>[BW,BH],onTap,'vb');
+const X=c=>PADX+OFF+(flip?COLS-1-c:c)*P, Y=r=>OFF+r*P;
+const TXT={'-':'−'};
+function drawPart(pt,grp){
+  const xs=pt.p.map(q=>X(q[1])), ys=pt.p.map(q=>Y(q[2]));
+  const x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys), mx=(x0+x1)/2, my=(y0+y1)/2, vert=(x1-x0)<1;
+  const pin=n=>pt.p.find(q=>q[0]===n), lead=()=>el('line',{x1:x0,y1:y0,x2:x1,y2:y1,class:'vb-lead'},grp);
+  const refval=(above,dy)=>{ if(vert){ el('text',{x:mx+10,y:my-1,class:'vb-ref',style:'text-anchor:start'},grp,pt.ref); el('text',{x:mx+10,y:my+7,class:'vb-val',style:'text-anchor:start'},grp,pt.val); }
+    else { el('text',{x:mx,y:my-(above||9),class:'vb-ref'},grp,pt.ref); el('text',{x:mx,y:my+(dy||15),class:'vb-val'},grp,pt.val); } };
+  const along=(len,th,rx)=>vert?el('rect',{x:mx-th/2,y:my-len/2,width:th,height:len,rx,class:'vb-body'},grp):el('rect',{x:mx-len/2,y:my-th/2,width:len,height:th,rx,class:'vb-body'},grp);
+  switch(pt.k){
+  case 'rv': { const a=pin('1'); lead(); el('circle',{cx:X(a[1]),cy:Y(a[2]),r:6.5,class:'vb-body'},grp); refval(10,15); break; }
+  case 'ax': case 'ax2': case 'dio': case 'dio2': {
+    lead(); const len=Math.max(x1-x0,y1-y0), big=pt.k==='ax2'||pt.k==='dio2';
+    const bl=pt.k==='ax2'?Math.min(len-18,94):pt.k==='dio2'?Math.min(len-24,76):Math.min(len-14,46), th=pt.k==='ax2'?28:pt.k==='dio2'?22:13;
+    along(bl,th,3);
+    if(pt.k.startsWith('dio')){ const k=pin('K'), kx=X(k[1]), ky=Y(k[2]);
+      if(vert){ const yy=ky<my?my-bl/2+4:my+bl/2-4; el('line',{x1:mx-th/2,y1:yy,x2:mx+th/2,y2:yy,stroke:'var(--body)','stroke-width':3},grp); }
+      else { const xx=kx<mx?mx-bl/2+4:mx+bl/2-4; el('line',{x1:xx,y1:my-th/2,x2:xx,y2:my+th/2,stroke:'var(--body)','stroke-width':3},grp); } }
+    if(big&&!vert){ el('text',{x:mx,y:my-th/2-4,class:'vb-ref'},grp,pt.ref+' '+pt.val); }
+    else if(vert){ el('text',{x:mx+th/2+3,y:my-1,class:'vb-ref',style:'text-anchor:start'},grp,pt.ref); el('text',{x:mx+th/2+3,y:my+7,class:'vb-val',style:'text-anchor:start'},grp,pt.val); }
+    else el('text',{x:mx,y:my-th/2-4,class:'vb-ref'},grp,pt.ref+' '+pt.val);
+    break; }
+  case 'dv': { const a=pin('A'), k=pin('K'); lead(); el('circle',{cx:X(a[1]),cy:Y(a[2]),r:6.5,class:'vb-body'},grp);
+    el('circle',{cx:X(a[1]),cy:Y(a[2]),r:2.6,fill:'var(--body)'},grp); refval(10,15); break; }
+  case 'cd': case 'ptc': { along(Math.max(x1-x0,y1-y0)+(pt.k==='ptc'?18:10),pt.k==='ptc'?17:12,6); refval(12,17); break; }
+  case 'cf': { along(Math.max(x1-x0,y1-y0)+16,24,2); refval(16,21); break; }
+  case 'elec': { const rr=pt.val.includes('47u')?24:19, pl=pin('+'), mi=pin('-');
+    el('circle',{cx:mx,cy:my,r:rr,class:'vb-body'},grp);
+    const sx=X(mi[1])-mx, sy=Y(mi[2])-my, L=Math.hypot(sx,sy)||1;           // shaded stripe on the minus side
+    el('path',{d:`M${mx+sx/L*rr*0.62-sy/L*rr*0.78} ${my+sy/L*rr*0.62+sx/L*rr*0.78}A${rr} ${rr} 0 0 ${flip?1:0} ${mx+sx/L*rr*0.62+sy/L*rr*0.78} ${my+sy/L*rr*0.62-sx/L*rr*0.78}`,fill:'none',stroke:'var(--body)','stroke-width':3,opacity:.55},grp);
+    el('text',{x:mx,y:my-rr+9,class:'vb-ref'},grp,pt.ref); el('text',{x:mx,y:my+rr+9,class:'vb-val'},grp,pt.val); break; }
+  case 'led': { el('circle',{cx:mx,cy:my,r:14,class:'vb-body'},grp); const k=pin('K'); const kx=X(k[1]);
+    const fx=mx+(kx<mx?-11:11); el('line',{x1:fx,y1:my-9,x2:fx,y2:my+9,stroke:'var(--body)','stroke-width':1.8},grp);
+    el('text',{x:mx,y:my-19,class:'vb-ref'},grp,pt.ref+' '+pt.val.replace(/^(\w+) (\w+)$/,'$2 ($1)')); break; }
+  case 'to92': { el('path',{d:`M${x0-12} ${y0+6}H${x1+12}A${(x1-x0)/2+12} ${(x1-x0)/2+12} 0 0 0 ${x0-12} ${y0+6}Z`,class:'vb-body'},grp);
+    el('text',{x:mx,y:y0-(x1-x0)/2-16,class:'vb-ref'},grp,pt.ref+' '+pt.val); break; }
+  case 'to220': { el('rect',{x:x0-12,y:y0-12,width:x1-x0+24,height:22,rx:2,class:'vb-body'},grp); el('rect',{x:x0-12,y:y0-17,width:x1-x0+24,height:5,fill:'var(--body)',opacity:.6},grp);
+    el('text',{x:mx,y:y0-21,class:'vb-ref'},grp,pt.ref+' '+pt.val); break; }
+  case 'to220h': { const g=pin('GND'), tc=g[1]+pt.tab[0], tr=g[2]+pt.tab[1], ux=Math.sign(pt.tab[0]), uy=Math.sign(pt.tab[1]);
+    const pts=[[1.45,-2],[7.7,-2],[7.7,2],[1.45,2]].map(([a,b])=>[X(g[1]+ux*a+uy*b),Y(g[2]+uy*a+ux*b)]);
+    const bx0=Math.min(...pts.map(p=>p[0])), bx1=Math.max(...pts.map(p=>p[0])), by0=Math.min(...pts.map(p=>p[1])), by1=Math.max(...pts.map(p=>p[1]));
+    el('rect',{x:bx0,y:by0,width:bx1-bx0,height:by1-by0,rx:2,class:'vb-body'},grp);
+    el('circle',{cx:X(tc),cy:Y(tr),r:9,fill:'none',stroke:'var(--body)','stroke-width':1.4},grp);
+    pt.p.forEach(q=>{ el('line',{x1:X(q[1]),y1:Y(q[2]),x2:X(q[1]+ux*1.45),y2:Y(q[2]+uy*1.45),class:'vb-lead'},grp);
+      el('text',{x:X(q[1]+ux*2.3),y:Y(q[2]+uy*2.3)+2.5,class:'vb-name'},grp,q[0]); });
+    el('text',{x:(bx0+bx1)/2,y:(by0+by1)/2-6+(ux?0:12),class:'vb-ref'},grp,pt.ref+' '+pt.val); el('text',{x:(bx0+bx1)/2,y:(by0+by1)/2+18,class:'vb-val'},grp,'lies flat on its tab'); break; }
+  case 'dip': { el('rect',{x:x0+8,y:y0-9,width:x1-x0-16,height:y1-y0+18,rx:3,class:'vb-body'},grp); const p1=pt.p[0]; el('circle',{cx:X(p1[1])+(X(p1[1])<mx?14:-14),cy:Y(p1[2])-3,r:2,fill:'var(--body)'},grp);
+    el('text',{x:mx,y:my+1,class:'vb-ref'},grp,pt.ref); el('text',{x:mx,y:my+9,class:'vb-val'},grp,pt.val); break; }
+  case 'sip': { el('rect',{x:x0-23,y:y0-15,width:x1-x0+46,height:y1-y0+30,rx:3,class:'vb-body'},grp);
+    el('text',{x:mx+(flip?-1:1)*0,y:y0-19,class:'vb-ref'},grp,pt.ref+' '+pt.val);
+    pt.p.forEach(q=>el('text',{x:X(q[1]-1.55),y:Y(q[2])+2.5,class:'vb-name'},grp,q[0])); break; }
+  case 'xh': { el('rect',{x:x0-12,y:y0-13,width:x1-x0+24,height:26,rx:2,class:'vb-body'},grp); el('text',{x:mx,y:y0-17,class:'vb-ref'},grp,pt.ref+' '+pt.val); break; }
+  case 'tp': { el('circle',{cx:mx,cy:my,r:8.5,fill:'none',stroke:'var(--body)','stroke-width':1.4},grp); el('text',{x:mx,y:my-12,class:'vb-ref'},grp,pt.ref+' '+pt.val); break; }
+  case 'xt60': { const pl=pin('+'), mi=pin('-'), left=X(pl[1])<BW/2, side=left?-1:1, edge=left?PADX+6:BW-PADX-6, cx=edge+side*52, cy=(Y(pl[2])+Y(mi[2]))/2;
+    el('rect',{x:cx-13,y:cy-27,width:26,height:54,rx:6,class:'vb-plug'},grp);
+    el('text',{x:cx,y:cy-31,class:'vb-ref'},grp,pt.ref+' XT60'); el('text',{x:cx,y:cy+38,class:'vb-val'},grp,left?'to battery':'to ESCs'); el('text',{x:cx,y:cy+46,class:'vb-val'},grp,pt.ref==='J1'?'male, 12 AWG':'female, 12 AWG');
+    [[pl,-12,'+'],[mi,12,'−']].forEach(([q,dy,s])=>{ const tx=X(q[1]), ty=Y(q[2]);
+      el('path',{d:`M${cx-side*13} ${cy+dy}C${(cx+tx)/2} ${cy+dy} ${(cx+tx)/2} ${ty} ${tx} ${ty}`,fill:'none',stroke:NETS[q[3]].c,'stroke-width':6,'stroke-linecap':'round','data-net':q[3],class:'vb-run'},grp);
+      el('text',{x:cx,y:cy+dy+3,class:'vb-ref'},grp,s); });
+    break; }
+  }
+}
+function drawBoard(){
+  const g=vb.g; g.textContent='';
+  el('rect',{x:PADX+6,y:6,width:BW-2*PADX-12,height:BH-12,rx:6,fill:'var(--board)',stroke:'var(--board-edge)','stroke-width':2},g);
+  for(let c=0;c<COLS;c++){ el('text',{x:X(c),y:20,class:'vb-axis'},g,c+1); el('text',{x:X(c),y:BH-13,class:'vb-axis'},g,c+1); }
+  for(let r=0;r<ROWS;r++){ const L=rowName(r); el('text',{x:PADX+17,y:Y(r)+3,class:'vb-axis'},g,L); el('text',{x:BW-PADX-17,y:Y(r)+3,class:'vb-axis'},g,L); }
+  const hg=el('g',{},g);
+  for(let c=0;c<COLS;c++)for(let r=0;r<ROWS;r++){ el('circle',{cx:X(c),cy:Y(r),r:4.2,class:'vb-ring'},hg); el('circle',{cx:X(c),cy:Y(r),r:1.7,class:'vb-hole'},hg); }
+  const bg=el('g',{},g), rg=el('g',{},g), wg=el('g',{},g), pg=el('g',{},g);
+  PARTS.forEach(pt=>drawPart(pt,el('g',{'data-ref':pt.ref,style:'cursor:pointer'},bg)));
+  RUNS.forEach(run=>{ const d=corners(run.cells).map((q,i)=>(i?'L':'M')+X(q[0])+' '+Y(q[1])).join('');
+    el('path',{d,stroke:NETS[run.net].c,'stroke-width':8,class:'vb-run','data-net':run.net,'stroke-dasharray':flip?'':'12 3'},rg);
+    el('path',{d,class:'vb-core','data-net':run.net},rg); });
+  WIRES.forEach(w=>{ const wd={thin:2,mid:3.4,heavy:6}[w.cls];
+    el('line',{x1:X(w.a.c),y1:Y(w.a.r),x2:X(w.b.c),y2:Y(w.b.r),stroke:NETS[w.net].c,'stroke-width':wd,class:'vb-wire','data-net':w.net,'stroke-dasharray':flip?'':(w.cls==='thin'?'5 3':'8 3')},wg); });
+  PARTS.forEach(pt=>pt.p.forEach(([n,c,r,net])=>{
+    const a={cx:X(c),cy:Y(r),r:5.6,stroke:'#fff','stroke-width':.8,style:'cursor:pointer'};
+    if(net){a.fill=NETS[net].c;a['data-net']=net;} else {a.fill='#9e9e9e';a['data-ref']=pt.ref;}
+    el('circle',a,pg); if(n.length<=2&&pt.k!=='to220h'&&pt.k!=='sip') el('text',{x:X(c),y:Y(r)+2.2,class:'vb-pin'},pg,TXT[n]||n);
+  }));
+  paintSel();
+}
+
+function paintSel(){
+  vbSvg.querySelectorAll('[data-net]').forEach(e=>e.classList.toggle('dimmed',!!selNet&&e.getAttribute('data-net')!==selNet));
+  document.querySelectorAll('#chips button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.net===selNet));
+  document.querySelectorAll('#schSvg [data-net]').forEach(e=>e.style.opacity=(!selNet||e.getAttribute('data-net')===selNet)?1:.3);
+}
+
+const info=document.getElementById('info');
+const runLen=run=>(run.cells.length-1)*2.54;
+function showNet(net){
+  selNet=net; paintSel();
+  if(!net){ info.innerHTML='<h2>Nothing selected</h2><p>Tap a coloured pad, wire or copper run to see what it joins. In the component view the wiring underneath is dashed; “Show solder side” shows it solid and mirrored.</p>'; return; }
+  const n=NETS[net], pads=padsByNet[net], runs=RUNS.filter(r=>r.net===net);
+  const onRun=new Set(runs.flatMap(r=>r.cells.map(q=>ck(q[0],q[1]))));
+  info.innerHTML=`<h2><span class="sw" style="background:${n.c}"></span>${net}</h2><p>${n.d}. ${pads.length} pads joined${runs.length?`; bare 12 AWG run of about ${Math.round(runs.reduce((s,r)=>s+runLen(r),0)/10)} cm carries the main current`:''}.</p><ul class="pads">${pads.map(p=>`<li>${p.id} · hole ${holeName(p.c,p.r)}${onRun.has(ck(p.c,p.r))?' · on the run':''}</li>`).join('')}</ul>`;
+}
+function showPart(ref){
+  const pt=PARTS.find(p=>p.ref===ref); if(!pt)return; selNet=null; paintSel();
+  info.innerHTML=`<h2>${pt.ref} · ${pt.val}</h2>${pt.buy?`<p>${pt.buy}</p>`:''}<ul class="pads">${pt.p.map(q=>`<li>pin ${q[0]} · hole ${holeName(q[1],q[2])} · ${q[3]||'not used'}</li>`).join('')}</ul>`;
+}
+function onTap(t){ if(!t){showNet(null);return;} const n=t.getAttribute('data-net'); if(n){showNet(n===selNet?null:n);return;} showPart(t.getAttribute('data-ref')); }
+const chips=document.getElementById('chips');
+Object.keys(NETS).forEach(k=>{const b=document.createElement('button'); b.type='button'; b.dataset.net=k; b.innerHTML=`<span class="sw" style="background:${NETS[k].c};width:10px;height:10px"></span>${k}`; b.onclick=()=>showNet(selNet===k?null:k); chips.appendChild(b);});
+document.getElementById('flipBtn').onclick=function(){flip=!flip; this.textContent=flip?'Show component side':'Show solder side'; document.getElementById('sideHint').textContent=flip?'Solder side (mirrored)':'Component side'; drawBoard();};
+
+
+/* ---------- schematic (pins, wires and labels are recorded, so __schCheck can compare it with the PCB netlist) ---------- */
+const schSvg=document.getElementById('schSvg'); const SW=2000,SH=1440;
+const sch=Viewer(schSvg,()=>[SW,SH],t=>{ if(t&&t.getAttribute('data-net')){const n=t.getAttribute('data-net'); showNet(n===selNet?null:n);} else showNet(null); },'sch');
+const SPIN={}, SSEG=[], SLAB=[];
+(function drawSch(){
+  const g=sch.g; el('rect',{x:0,y:0,width:SW,height:SH,class:'s-bgr'},g);
+  const wire=(...p)=>{ let d=''; for(let i=0;i<p.length;i+=2){ d+=(i?'L':'M')+p[i]+' '+p[i+1]; if(i)SSEG.push([p[i-2],p[i-1],p[i],p[i+1]]); } el('path',{d,class:'s-w'},g); };
+  const pin=(ref,n,x,y)=>{ SPIN[ref+'.'+n]=[x,y]; };
+  const gnd=(x,y)=>{ el('path',{d:`M${x} ${y}v8M${x-10} ${y+8}h20M${x-6} ${y+12}h12M${x-2} ${y+16}h4`,class:'s-w'},g); SLAB.push([x,y,'GND']); };
+  const pwr=(x,y,n)=>{ el('path',{d:`M${x} ${y}v-8M${x-9} ${y-8}h18`,class:'s-w'},g); el('text',{x,y:y-13,class:'s-n','text-anchor':'middle','data-net':n,style:'cursor:pointer'},g,n); SLAB.push([x,y,n]); };
+  const lab=(x,y,n,side)=>{ const o={l:[-5,4,'end'],r:[5,4,'start'],u:[0,-6,'middle'],d:[0,16,'middle']}[side||'r'];
+    el('text',{x:x+o[0],y:y+o[1],class:'s-n','text-anchor':o[2],'data-net':n,style:'cursor:pointer'},g,n); SLAB.push([x,y,n]); };
+  const title=(x,y,t)=>el('text',{x,y,class:'s-t'},g,t);
+  const note=(x,y,t,anchor)=>el('text',{x,y,class:'s-p','text-anchor':anchor||'start'},g,t);
+  function two(kind,x1,y1,x2,y2,ref,val,left){
+    const L=Math.hypot(x2-x1,y2-y1), ang=Math.atan2(y2-y1,x2-x1)*180/Math.PI, b={res:36,fuse:36,cap:8,diode:16,zener:16,led:16}[kind], s=(L-b)/2;
+    const q=el('g',{transform:`translate(${x1},${y1}) rotate(${ang})`},g);
+    el('path',{d:`M0 0H${s}M${s+b} 0H${L}`,class:'s-w'},q);
+    if(kind==='res') el('rect',{x:s,y:-7,width:b,height:14,class:'s-box'},q);
+    if(kind==='fuse'){ el('rect',{x:s,y:-7,width:b,height:14,class:'s-box'},q); el('path',{d:`M${s} 0H${s+b}`,class:'s-y'},q); }
+    if(kind==='cap') el('path',{d:`M${s} -11V11M${s+b} -11V11`,class:'s-y'},q);
+    if(kind==='diode'||kind==='zener'||kind==='led'){ el('path',{d:`M${s} -8V8L${s+b} 0Z`,class:'s-f'},q);
+      el('path',{d:kind==='zener'?`M${s+b-4} -11L${s+b} -8V8L${s+b+4} 11`:`M${s+b} -8V8`,class:'s-y'},q);
+      if(kind==='led') el('path',{d:`M${s+4} -11l6 -8m-1 5l1 -5l-5 2M${s+12} -11l6 -8m-1 5l1 -5l-5 2`,class:'s-y','stroke-width':1.2},q); }
+    const mx=(x1+x2)/2,my=(y1+y2)/2;
+    if(Math.abs(x2-x1)<1){ const ox=kind==='led'?26:15, xx=left?mx-ox:mx+ox, an=left?'end':'start';
+      el('text',{x:xx,y:my-2,class:'s-r','text-anchor':an},g,ref); if(val)el('text',{x:xx,y:my+11,class:'s-v','text-anchor':an},g,val); }
+    else { const up=kind==='led'?24:12; el('text',{x:mx,y:my-up,class:'s-r','text-anchor':'middle'},g,ref); if(val)el('text',{x:mx,y:my+22,class:'s-v','text-anchor':'middle'},g,val); }
+  }
+  const R=(ref,val,x1,y1,x2,y2,left)=>{ two('res',x1,y1,x2,y2,ref,val,left); pin(ref,'1',x1,y1); pin(ref,'2',x2,y2); };
+  const C=(ref,val,x1,y1,x2,y2,pol,left)=>{ two('cap',x1,y1,x2,y2,ref,val,left); pin(ref,'1',x1,y1); pin(ref,'2',x2,y2);
+    if(pol){ const v=Math.abs(x2-x1)<1, mx=(x1+x2)/2, my=(y1+y2)/2; el('text',{x:v?mx-13:mx-(x2>x1?13:-13),y:v?my-(y2>y1?8:-14):my-8,class:'s-p'},g,'+'); } };
+  const D=(kind,ref,val,xa,ya,xk,yk,left)=>{ two(kind,xa,ya,xk,yk,ref,val,left); pin(ref,'2',xa,ya); pin(ref,'1',xk,yk); };
+  const F=(ref,val,x1,y1,x2,y2)=>{ two('fuse',x1,y1,x2,y2,ref,val); pin(ref,'1',x1,y1); pin(ref,'2',x2,y2); };
+  function arrow(tx,ty,ux,uy){ const nx=-uy, ny=ux; el('path',{d:`M${tx} ${ty}L${tx-ux*7+nx*3.5} ${ty-uy*7+ny*3.5}L${tx-ux*7-nx*3.5} ${ty-uy*7-ny*3.5}Z`,class:'s-f'},g); }
+  function txt(x,y,ref,val,mir){ const an=mir?'end':'start', xx=mir?x-10:x+10; el('text',{x:xx,y:y-3,class:'s-r','text-anchor':an},g,ref); el('text',{x:xx,y:y+10,class:'s-v','text-anchor':an},g,val); }
+  // MOSFET: gate at x-30 (x+30 when mirrored); drain on top unless srcTop (P-channel high side)
+  function fet(x,y,ref,val,type,pd,mir,srcTop){
+    const s=mir?-1:1, cx=x-9*s, bodyTo=srcTop?y-10:y+10;
+    el('path',{d:`M${x-30*s} ${y}H${x-14*s}M${x-14*s} ${y-12}V${y+12}M${cx} ${y-14}V${y-6}M${cx} ${y-3}V${y+3}M${cx} ${y+6}V${y+14}M${cx} ${y-10}H${x}V${y-30}M${cx} ${y+10}H${x}V${y+30}M${cx} ${y}H${x}V${bodyTo}`,class:'s-y'},g);
+    if(type==='n') arrow(cx+1*s,y,-s,0); else arrow(x-1*s,y,s,0);
+    pin(ref,pd.G,x-30*s,y); pin(ref,srcTop?pd.S:pd.D,x,y-30); pin(ref,srcTop?pd.D:pd.S,x,y+30); txt(x,y,ref,val,mir);
+  }
+  // BJT: base at x-30 (x+30 mirrored); collector on top unless eTop
+  function bjt(x,y,ref,val,type,pd,mir,eTop){
+    const s=mir?-1:1, cs=eTop?1:-1, bx=x-12*s;
+    el('path',{d:`M${x-30*s} ${y}H${bx}M${bx} ${y-12}V${y+12}M${bx} ${y+cs*5}L${x} ${y+cs*14}V${y+cs*30}M${bx} ${y-cs*5}L${x} ${y-cs*14}V${y-cs*30}`,class:'s-y'},g);
+    const ex=x-bx, ey=-cs*9, L=Math.hypot(ex,ey), ux=ex/L, uy=ey/L;
+    if(type==='npn') arrow(bx+ex*0.85,y-cs*5+ey*0.85,ux,uy); else arrow(bx+ex*0.3,y-cs*5+ey*0.3,-ux,-uy);
+    pin(ref,pd.B,x-30*s,y); pin(ref,pd.C,x,y+cs*30); pin(ref,pd.E,x,y-cs*30); txt(x,y,ref,val,mir);
+  }
+  function comp(x,y,unit,pp,pm,po,nP,nM,what){
+    el('path',{d:`M${x-30} ${y-32}V${y+32}L${x+30} ${y}Z`,class:'s-y'},g);
+    el('path',{d:`M${x-50} ${y-15}H${x-30}M${x-50} ${y+15}H${x-30}M${x+30} ${y}H${x+50}`,class:'s-w'},g);
+    el('text',{x:x-25,y:y-11,class:'s-p'},g,'+'); el('text',{x:x-25,y:y+19,class:'s-p'},g,'−');
+    [[pp,x-43,y-19],[pm,x-43,y+11],[po,x+36,y-4]].forEach(a=>el('text',{x:a[1],y:a[2],class:'s-p'},g,a[0]));
+    el('text',{x:x-6,y:y-38,class:'s-r','text-anchor':'middle'},g,unit); el('text',{x,y:y+52,class:'s-v','text-anchor':'middle'},g,what);
+    pin('U2',pp,x-50,y-15); pin('U2',pm,x-50,y+15); pin('U2',po,x+50,y); lab(x-50,y-15,nP,'l'); lab(x-50,y+15,nM,'l');
+  }
+  function opto(x,y,ref,val){
+    const q=el('g',{transform:`translate(${x},${y})`},g);
+    el('rect',{x:0,y:0,width:80,height:60,class:'s-box'},q);
+    el('path',{d:'M0 15H22V22M15 34H29M22 34V45H0',class:'s-y'},q); el('path',{d:'M15 22H29L22 34Z',class:'s-f'},q);
+    el('path',{d:'M34 26h10m-3 -2l3 2l-3 2M34 33h10m-3 -2l3 2l-3 2',class:'s-y','stroke-width':1.1},q);
+    el('path',{d:'M56 19V41M56 26L68 15H80M56 34L68 45H80',class:'s-y'},q);
+    [['1',x+3,y+11],['2',x+3,y+56],['4',x+72,y+11],['3',x+72,y+56]].forEach(a=>el('text',{x:a[1],y:a[2],class:'s-p'},g,a[0]));
+    el('text',{x:x+40,y:y-7,class:'s-r','text-anchor':'middle'},g,ref+' '+val);
+    pin(ref,'1',x,y+15); pin(ref,'2',x,y+45); pin(ref,'4',x+80,y+15); pin(ref,'3',x+80,y+45);
+  }
+  const box=(x,y,w,h)=>el('rect',{x,y,width:w,height:h,class:'s-box'},g);
+  const pinL=(ref,n,name,x,y)=>{ el('path',{d:`M${x-20} ${y}H${x}`,class:'s-w'},g); el('text',{x:x+4,y:y+3,class:'s-p'},g,name); el('text',{x:x-17,y:y-3,class:'s-p'},g,n); pin(ref,n,x-20,y); };
+  const pinR=(ref,n,name,x,y)=>{ el('path',{d:`M${x} ${y}H${x+20}`,class:'s-w'},g); el('text',{x:x-4,y:y+3,class:'s-p','text-anchor':'end'},g,name); el('text',{x:x+12,y:y-3,class:'s-p'},g,n); pin(ref,n,x+20,y); };
+  const pinV=(ref,n,name,x,y,dir)=>{ el('path',{d:`M${x} ${y}V${y+20*dir}`,class:'s-w'},g); el('text',{x,y:y-dir*-1*0+(dir>0?-4:12),class:'s-p','text-anchor':'middle'},g,name); el('text',{x:x+4,y:y+dir*14+3,class:'s-p'},g,n); pin(ref,n,x,y+20*dir); };
+  const tp=(ref,net,x,y)=>{ el('path',{d:`M${x} ${y}V${y-9}`,class:'s-w'},g); el('circle',{cx:x,cy:y-14,r:5,class:'s-tp'},g); el('text',{x:x+9,y:y-11,class:'s-r'},g,ref); pin(ref,'1',x,y); };
+
+  // ================= power path
+  title(40,44,'Power path: 4 × IRFB3206 in parallel, high side (30 A continuous, 60 A burst)');
+  box(50,78,40,104); pinR('J1','2','+',90,100); pinR('J1','1','−',90,160);
+  el('text',{x:70,y:72,class:'s-r','text-anchor':'middle'},g,'J1'); note(70,198,'XT60','middle'); note(70,210,'battery','middle'); note(70,222,'(40 A fuse in +)','middle');
+  wire(110,160,128,160); gnd(128,160);
+  wire(110,100,1460,100); lab(1460,100,'VIN','r');
+  D('zener','D1','1.5KE33A',170,170,170,100); gnd(170,170);
+  R('RK1','0R',230,100,230,170); lab(230,170,'VIN_K','d');
+  D('zener','D3','BZX55C12',345,190,345,100,true);
+  R('R1','47k',395,100,395,190);
+  wire(345,190,455,190);
+  fet(485,190,'Q5','IRF9540N','p',{G:'1',D:'2',S:'3'},false,true); wire(485,160,485,100);
+  R('R2','22k',420,190,420,270);
+  fet(420,300,'Q6','2N7000','n',{G:'2',D:'3',S:'1'}); gnd(420,330); lab(390,300,'PCEN','l');
+  F('F1','RXEF050',485,220,485,290);
+  wire(485,290,600,290); R('R3','22 2W',535,290,535,370); R('R4','22 2W',600,290,600,370);
+  note(300,225,'pre-charge','middle'); note(300,237,'1.4–2.1 A','middle');
+  wire(535,370,1740,370); lab(700,370,'VOUT','d');
+  [800,1020,1240,1460].forEach((x,i)=>{ const n=i+1;
+    fet(x,220,'Q'+n,'IRFB3206','n',{G:'1',D:'2',S:'3'}); wire(x,190,x,100); wire(x,250,x,370); wire(x-30,220,x-50,220);
+    R('RG'+n,'10',x-50,220,x-130,220); lab(x-130,220,'FG','l'); R('RS'+n,'1M',x-50,220,x-50,370); });
+  D('zener','D2','1.5KE33A',1560,440,1560,370); gnd(1560,440);
+  R('RK2','0R',1640,370,1640,440); lab(1640,440,'SRC','d');
+  box(1760,348,40,104); pinL('J2','2','+',1760,370); pinL('J2','1','−',1760,430);
+  el('text',{x:1780,y:342,class:'s-r','text-anchor':'middle'},g,'J2'); note(1780,468,'XT60','middle'); note(1780,480,'to ESCs','middle');
+  wire(1740,430,1715,430); gnd(1715,430);
+
+  // ================= 5 V supply and reference
+  title(40,510,'5 V supply and 2.5 V reference');
+  D('diode','D4','1N4007',80,560,150,560); lab(80,560,'VIN_K','l');
+  R('R5','10',150,560,230,560); wire(230,560,300,560);
+  C('C1','47u 50V',260,560,260,640,true,true); gnd(260,640);
+  box(320,535,60,60); el('text',{x:350,y:527,class:'s-r','text-anchor':'middle'},g,'U1 L7805CV');
+  pinL('U1','1','IN',320,560); pinR('U1','3','OUT',380,560); pinV('U1','2','GND',350,595,1); gnd(350,615);
+  wire(400,560,600,560); lab(600,560,'V5','r');
+  C('C2','10u 25V',430,560,430,640,true); gnd(430,640);
+  tp('TP3','V5',475,560);
+  R('R6','10k',520,560,520,640); R('R7','10k',520,640,520,720); gnd(520,720);
+  wire(520,640,610,640); C('C8','100n',575,640,575,720); gnd(575,720); lab(610,640,'REF','r');
+  tp('TP4','GND',470,700); gnd(470,700);
+
+  // ================= isolated gate drive
+  title(670,510,'Isolated 12 V gate drive (its 0 V rides on VOUT)');
+  box(740,540,80,80); el('text',{x:780,y:532,class:'s-r','text-anchor':'middle'},g,'U3 B0512S-1WR3');
+  pinL('U3','2','Vin',740,560); pinL('U3','1','GND',740,600); pinR('U3','4','+Vo',820,560); pinR('U3','3','0V',820,600);
+  wire(670,560,720,560); lab(670,560,'V5','l');
+  C('C4','10u 16V',695,560,695,640,true,true); gnd(695,640); gnd(720,600);
+  wire(840,560,1190,560); lab(1000,560,'V12F','u');
+  wire(840,600,860,600,860,840); wire(860,840,1560,840); lab(1300,840,'SRC','d');
+  C('C5','22u 25V',890,560,890,840,true); D('zener','D5','1N4744A',960,840,960,560); R('R33','4.7k',1030,560,1030,840);
+  opto(1090,600,'U4','PC817'); wire(1170,615,1190,615,1190,560); lab(1090,615,'UGA','l'); lab(1090,645,'CATH','l');
+  wire(1170,645,1230,645); lab(1200,645,'DRV','u');
+  R('R34','22k',1230,645,1230,840);
+  D('diode','D10','1N4148',1230,645,1300,645); R('R35','10k',1300,645,1380,645);
+  wire(1380,645,1560,645,1560,680); wire(1560,645,1620,645);
+  R('R39','100',1410,715,1410,645); C('C6','220n film',1410,715,1410,785); gnd(1410,785);
+  tp('TP1','FG',1440,645);
+  D('zener','D11','P6KE18A',1490,840,1490,645);
+  bjt(1560,710,'Q12','BC327','pnp',{B:'2',C:'1',E:'3'},true,true);
+  R('R36','47',1560,740,1560,840,true);
+  R('R37','10k',1620,645,1620,710); wire(1590,710,1620,710);
+  D('diode','D6','1N4148',1620,710,1620,780); R('R38','1k',1620,780,1620,850); lab(1620,850,'DRV','d');
+  lab(1395,645,'FG','u');
+  note(670,880,'U4 on: +12 V over the module’s 0 V reaches the gates through D10 and R35; R39/C6 make VOUT ramp up softly.');
+  note(670,893,'U4 off: R34 pulls DRV to SRC, D6 and R38 turn Q12 on, and Q12 empties the gates through R36 in microseconds.');
+
+  // ================= live
+  title(1680,510,'Live: both comparators agree');
+  pwr(1780,550,'V5'); R('R31','1k',1780,550,1780,610); D('led','D9','red LIVE',1780,610,1780,680);
+  wire(1780,680,1780,710); wire(1780,695,1850,695); lab(1850,695,'CATH','r');
+  fet(1780,740,'Q11','2N7000','n',{G:'2',D:'3',S:'1'}); lab(1750,740,'DONE','l');
+  fet(1780,800,'Q10','2N7000','n',{G:'2',D:'3',S:'1'}); lab(1750,800,'PCEN','l'); gnd(1780,830);
+  pwr(1910,550,'V5'); R('R32','330',1910,550,1910,620); lab(1910,620,'UGA','d');
+  note(1700,880,'PCEN and DONE high: LIVE LED and U4 on.');
+
+  // ================= sensors and arm chain
+  title(40,960,'Sensors and arm chain: both must see the magnet');
+  R('R9','100',160,1010,240,1010); lab(160,1010,'V5','l'); wire(240,1010,260,1010);
+  box(280,990,40,40); pinL('J4','1','',280,1010); pinR('J4','2','',320,1010);
+  el('text',{x:300,y:982,class:'s-r','text-anchor':'middle'},g,'J4'); note(300,1046,'MC-38 reed','middle'); note(300,1058,'closed by magnet','middle');
+  wire(340,1010,560,1010,560,1040); lab(400,1010,'ROUT','u');
+  bjt(560,1070,'Q7','2N3906','pnp',{B:'2',C:'3',E:'1'},false,true);
+  R('R11','47k',480,1010,480,1070,true); wire(480,1070,530,1070); R('R10','10k',480,1070,480,1150,true);
+  box(60,1130,40,100); pinR('J3','1','S',100,1150); pinR('J3','2','+',100,1180); pinR('J3','3','−',100,1210);
+  el('text',{x:80,y:1122,class:'s-r','text-anchor':'middle'},g,'J3'); note(80,1246,'KY-003','middle'); note(80,1258,'Hall module','middle');
+  wire(120,1150,480,1150); lab(300,1150,'HALL','u');
+  wire(120,1180,180,1180); R('R8','100',260,1180,180,1180); lab(260,1180,'V5','r'); lab(150,1180,'V5S','d');
+  gnd(120,1210);
+  wire(560,1100,560,1130,760,1130); lab(560,1130,'ARM','l');
+  R('R12','4.7k',600,1130,600,1210); gnd(600,1210);
+  R('R15','100k',660,1130,660,1210); wire(660,1210,790,1210); C('C7','10u 16V',710,1210,710,1290,true); gnd(710,1290);
+  tp('TP2','EN',755,1210); lab(790,1210,'EN','r');
+  R('R16','10k',760,1130,840,1130);
+  bjt(870,1130,'Q8','2N3904','npn',{B:'2',C:'3',E:'1'}); gnd(870,1160);
+  wire(870,1100,870,1060,940,1060); pwr(870,990,'V5'); R('R17','10k',870,990,870,1060,true); lab(905,1060,'NARM','u');
+  R('R18','10k',940,1060,1000,1060);
+  bjt(1030,1060,'Q9','2N3904','npn',{B:'2',C:'3',E:'1'}); gnd(1030,1090);
+  R('R19','100k',1000,1060,1000,1140,true); gnd(1000,1140);
+  R('R20','220',1030,1030,1030,960); lab(1030,960,'EN','u');
+  note(300,1425,'ARM charges EN through R15 into C7 (about 0.8 s). When ARM drops, Q8 lets NARM rise and Q9 empties EN through R20 in about 1.5 ms.');
+  // LEDs
+  lab(60,1300,'V5S','l'); R('R13','1k',60,1300,140,1300); D('led','D7','blue HALL',140,1300,210,1300); lab(210,1300,'HALL','r');
+  lab(60,1380,'ROUT','l'); R('R14','1k',60,1380,140,1380); D('led','D8','blue REED',140,1380,210,1380); gnd(210,1380);
+
+  // ================= LM339 sequencing
+  title(1120,960,'Pre-charge sequencing: one LM339 (U2)');
+  pwr(1150,1010,'VIN_K'); R('R24','160k 1%',1150,1010,1150,1090); R('R25','10k 1%',1150,1090,1150,1170,true); gnd(1150,1170);
+  wire(1150,1090,1240,1090); C('C10','10n',1210,1090,1210,1170); gnd(1210,1170); lab(1240,1090,'VIND','r');
+  pwr(1320,1010,'VIN_K'); R('R26','1M',1320,1010,1320,1090); R('R27','68k',1320,1090,1320,1170,true); gnd(1320,1170);
+  wire(1320,1090,1440,1090); C('C11','3.3u X7R',1380,1090,1380,1170); gnd(1380,1170); lab(1410,1090,'RAMP','u');
+  R('R28','1k',1440,1090,1520,1090); lab(1520,1090,'RRST','r');
+  pwr(1600,1010,'SRC'); R('R21','75k 1%',1600,1010,1600,1090); R('R22','10k 1%',1600,1090,1600,1170,true); gnd(1600,1170);
+  wire(1600,1090,1760,1090); C('C9','10n',1660,1090,1660,1170); gnd(1660,1170);
+  pwr(1720,1010,'V5'); R('R23','470k',1720,1010,1720,1090); lab(1760,1090,'VOD','r');
+  pwr(1880,1000,'V5'); wire(1880,1000,1880,1040); box(1860,1060,40,55); pinV('U2','3','V+',1880,1060,-1); pinV('U2','12','GND',1880,1115,1); gnd(1880,1135);
+  el('text',{x:1880,y:1092,class:'s-r','text-anchor':'middle'},g,'U2');
+  wire(1880,1020,1940,1020); C('C3','100n',1940,1020,1940,1100); gnd(1940,1100);
+  comp(1200,1290,'U2A','5','4','2','EN','REF','on when EN > 2.5 V'); wire(1250,1290,1290,1290); pwr(1290,1210,'V5'); R('R29','10k',1290,1210,1290,1290); lab(1270,1290,'PCEN','d');
+  comp(1420,1290,'U2B','7','6','1','VOD','RAMP','off if VOUT lags the ramp'); lab(1470,1290,'PCEN','r');
+  comp(1640,1290,'U2C','9','8','14','VOD','VIND','VOUT > VIN / 2'); wire(1690,1290,1730,1290); pwr(1730,1210,'V5'); R('R30','10k',1730,1210,1730,1290); lab(1710,1290,'DONE','d');
+  comp(1860,1290,'U2D','11','10','13','EN','REF','empties the ramp'); lab(1910,1290,'RRST','r');
+  note(1120,1395,'Labels with the same name are joined. Values and pin numbers as on ks_tht.kicad_pcb.');
+
+  // junction dots: three or more wire ends, pins or wire crossings that join
+  const key=(x,y)=>Math.round(x)+','+Math.round(y), deg=new Map(), inc=(k,n)=>deg.set(k,(deg.get(k)||0)+n);
+  SSEG.forEach(([x1,y1,x2,y2])=>{ inc(key(x1,y1),1); inc(key(x2,y2),1); });
+  Object.values(SPIN).forEach(([x,y])=>inc(key(x,y),1));
+  const pts=[...new Set([...SSEG.flatMap(s=>[key(s[0],s[1]),key(s[2],s[3])]),...Object.values(SPIN).map(p=>key(p[0],p[1]))])];
+  pts.forEach(k=>{ const [x,y]=k.split(',').map(Number); SSEG.forEach(s=>{ if(inside(x,y,s))inc(k,2); }); });
+  deg.forEach((n,k)=>{ if(n>=3){ const [x,y]=k.split(',').map(Number); el('circle',{cx:x,cy:y,r:3.2,class:'s-j'},g); } });
+})();
+function inside(x,y,[x1,y1,x2,y2]){   // strictly inside an axis-parallel (or straight) segment
+  const cr=(x2-x1)*(y-y1)-(y2-y1)*(x-x1); if(Math.abs(cr)>0.5)return false;
+  const t=((x-x1)*(x2-x1)+(y-y1)*(y2-y1))/((x2-x1)**2+(y2-y1)**2); return t>1e-6&&t<1-1e-6; }
+window.__schCheck=function(){
+  const par=new Map(), add=k=>{ if(!par.has(k))par.set(k,k); return k; }, f=k=>{ add(k); while(par.get(k)!==k){ par.set(k,par.get(par.get(k))); k=par.get(k); } return k; }, uni=(a,b)=>par.set(f(a),f(b));
+  const K=(x,y)=>Math.round(x)+','+Math.round(y), pts=[];
+  Object.values(SPIN).forEach(([x,y])=>{ add(K(x,y)); pts.push([x,y]); });
+  SLAB.forEach(([x,y,n])=>{ uni(K(x,y),'net:'+n); pts.push([x,y]); });
+  SSEG.forEach(s=>{ uni(K(s[0],s[1]),K(s[2],s[3])); pts.push([s[0],s[1]],[s[2],s[3]]); });
+  SSEG.forEach(s=>pts.forEach(([x,y])=>{ if(inside(x,y,s))uni(K(x,y),K(s[0],s[1])); }));
+  const errors=[], pcb={}; Object.entries(PCBNET).forEach(([ref,v])=>Object.entries(v.pads).forEach(([n,net])=>{ if(net)pcb[ref+'.'+n]=net; }));
+  Object.keys(pcb).forEach(id=>{ if(!SPIN[id])errors.push('not drawn: '+id); });
+  Object.keys(SPIN).forEach(id=>{ if(!(id in pcb))errors.push('not a connected PCB pad: '+id); });
+  const setNets=new Map(), netSets={};
+  Object.entries(SPIN).forEach(([id,[x,y]])=>{ const net=pcb[id]; if(!net)return; const s=f(K(x,y));
+    if(!setNets.has(s))setNets.set(s,new Set()); setNets.get(s).add(net); (netSets[net]=netSets[net]||new Set()).add(s); });
+  setNets.forEach(ns=>{ if(ns.size>1)errors.push('short: '+[...ns].join(' + ')); });
+  Object.entries(netSets).forEach(([net,ss])=>{ if(ss.size>1)errors.push('split: '+net+' drawn in '+ss.size+' pieces'); });
+  SLAB.forEach(([x,y,n])=>{ const ns=setNets.get(f(K(x,y))); if(!ns)errors.push('label '+n+' at '+x+','+y+' joins no pin'); else if(!ns.has(n))errors.push('label '+n+' sits on '+[...ns].join('/')); });
+  const ends=new Map(); const bump=k=>ends.set(k,(ends.get(k)||0)+1);
+  SSEG.forEach(s=>{ bump(K(s[0],s[1])); bump(K(s[2],s[3])); }); Object.values(SPIN).forEach(([x,y])=>bump(K(x,y))); SLAB.forEach(([x,y])=>bump(K(x,y)));
+  SSEG.forEach(s=>[[s[0],s[1]],[s[2],s[3]]].forEach(([x,y])=>{ if(ends.get(K(x,y))<2&&!SSEG.some(t=>t!==s&&inside(x,y,t)))errors.push('loose wire end at '+x+','+y); }));
+  return {errors, pins:Object.keys(SPIN).length, pcbPins:Object.keys(pcb).length};
+};
+window.__schSVG=function(){
+  const c=schSvg.cloneNode(true); c.setAttribute('xmlns',NS); c.setAttribute('viewBox','0 0 '+SW+' '+SH); c.setAttribute('width',SW); c.setAttribute('height',SH); c.removeAttribute('id'); c.removeAttribute('aria-label');
+  c.firstChild.removeAttribute('transform'); c.querySelectorAll('[style]').forEach(e=>e.removeAttribute('style')); c.querySelectorAll('[data-net]').forEach(e=>e.removeAttribute('data-net'));
+  const st=document.createElementNS(NS,'style');
+  st.textContent='.s-bgr{fill:#fff}.s-w{stroke:#1f2421;stroke-width:1.6;fill:none;stroke-linecap:round}.s-y{stroke:#0b4f8a;stroke-width:1.8;fill:none;stroke-linejoin:round;stroke-linecap:round}.s-f{fill:#0b4f8a;stroke:#0b4f8a}.s-d,.s-j{fill:#1f2421}.s-tp{fill:#fff;stroke:#0b4f8a;stroke-width:1.6}.s-r{font:600 12px monospace;fill:#0b4f8a}.s-v{font:11px monospace;fill:#555}.s-n{font:600 12px monospace;fill:#b3261e}.s-t{font:700 13px sans-serif;fill:#555;letter-spacing:1px;text-transform:uppercase}.s-p{font:9px monospace;fill:#555}.s-box{fill:none;stroke:#0b4f8a;stroke-width:1.8}';
+  c.insertBefore(st,c.firstChild); return '<?xml version="1.0" encoding="UTF-8"?>\n'+c.outerHTML;
+};
+
+
+/* ---------- tables ---------- */
+const sw=net=>`<span class="sw" style="background:${NETS[net].c};width:10px;height:10px"></span> ${net}`;
+const pid=p=>p.run?p.id:p.id;
+function buildTables(){
+document.getElementById('runTbl').innerHTML='<tr><th>#</th><th>Net</th><th>From</th><th>Hole</th><th>To</th><th>Hole</th><th>Path (bends)</th><th>Length</th></tr>'+
+  RUNS.map((r,i)=>`<tr><td class="m">${i+1}</td><td class="m">${sw(r.net)}</td><td class="m">${pid(r.a)}</td><td class="m">${holeName(r.a.c,r.a.r)}</td><td class="m">${r.b.id}</td><td class="m">${holeName(r.b.c,r.b.r)}</td><td class="m w">${corners(r.cells).map(q=>holeName(q[0],q[1])).join(' → ')}</td><td class="m">${(runLen(r)/10).toFixed(1)} cm</td></tr>`).join('');
+document.getElementById('wireTbl').innerHTML='<tr><th>#</th><th>Net</th><th>From</th><th>Hole</th><th>To</th><th>Hole</th><th>Wire</th></tr>'+
+  WIRES.map((w,i)=>`<tr><td class="m">${i+1}</td><td class="m">${sw(w.net)}</td><td class="m">${pid(w.a)}</td><td class="m">${holeName(w.a.c,w.a.r)}</td><td class="m">${w.b.id}</td><td class="m">${holeName(w.b.c,w.b.r)}</td><td>${{thin:'thin',mid:'20 AWG insulated',heavy:'12 AWG (no free path for a bare run)'}[w.cls]}</td></tr>`).join('');
+document.getElementById('bomTbl').innerHTML='<tr><th>Ref</th><th>Part</th><th>Buy</th><th>Pins and holes</th></tr>'+
+  PARTS.map(p=>`<tr><td class="m">${p.ref}</td><td>${p.val}</td><td class="w">${p.buy}</td><td class="m">${p.p.map(q=>q[0]+'='+holeName(q[1],q[2])).join('  ')}</td></tr>`).join('');
+}
+
+/* ---------- tabs ---------- */
+const panes={board:'pane-board',sch:'pane-sch',list:'pane-list'}; let fitted={board:false,sch:false};
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.tabs button').forEach(x=>x.setAttribute('aria-selected',x===b));
+  for(const k in panes)document.getElementById(panes[k]).hidden=(k!==b.dataset.tab);
+  if(b.dataset.tab==='sch'&&!fitted.sch){sch.fit();fitted.sch=true;}
+  if(b.dataset.tab==='board')vb.fit();
+});
+document.querySelectorAll('[data-z]').forEach(b=>b.onclick=()=>{const v=b.dataset.for==='vb'?vb:sch; v.fit();});
+function applySpread(f){
+  SPREAD=f; const L=layoutParts(f); PARTS=L.parts; COLS=L.cols; ROWS=L.rows;
+  BW=2*PADX+OFF*2+(COLS-1)*P; BH=OFF*2+(ROWS-1)*P;
+  buildWires(); buildTables(); drawBoard(); vb.fit();
+  const sz=document.getElementById('vbSize'), w=(COLS*2.54/10).toFixed(1), h=(ROWS*2.54/10).toFixed(1);
+  if(sz) sz.textContent=`${COLS} × ${ROWS} holes, about ${w} × ${h} cm, ${RUNS.length} bare runs, ${WIRES.length} wires`;
+  document.getElementById('spreadv').textContent=f.toFixed(2).replace(/0$/,'').replace(/\.0$/,'')+'×';
+  try{ localStorage.setItem('ks-vero-spread',String(f)); }catch(e){}
+}
+const spreadIn=document.getElementById('spread');
+let f0=1; try{ f0=parseFloat(localStorage.getItem('ks-vero-spread'))||1; }catch(e){}
+spreadIn.value=String(f0);
+spreadIn.addEventListener('input',()=>applySpread(parseFloat(spreadIn.value)));
+showNet(null); requestAnimationFrame(()=>applySpread(f0));
+window.__vero=()=>({parts:PARTS.length, cols:COLS, rows:ROWS, runs:RUNS.length, wires:WIRES.length, fail:ROUTE_FAIL.map(p=>p.id), spread:SPREAD,
+  wireCls:WIRES.reduce((o,w)=>(o[w.cls]=(o[w.cls]||0)+1,o),{}), runCm:RUNS.map(r=>r.net+':'+(runLen(r)/10).toFixed(1))});
+window.__applySpread=applySpread;
+})();
+</script>
