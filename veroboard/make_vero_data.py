@@ -32,7 +32,8 @@ NETS = {
  "G1": ("#7b1fa2", "Q1 gate (after its 10 Ω resistor RG1; RS1 1 MΩ to the source)"),
  "G2": ("#8e24aa", "Q2 gate (RG2 10 Ω, RS2 1 MΩ)"), "G3": ("#9c27b0", "Q3 gate (RG3 10 Ω, RS3 1 MΩ)"),
  "G4": ("#ab47bc", "Q4 gate (RG4 10 Ω, RS4 1 MΩ)"),
- "FG": ("#6a1b9a", "Gate bus: drives Q1–Q4 through RG1–RG4; C6 220 nF to GND gives the soft start"),
+ "FG": ("#6a1b9a", "Gate bus: drives Q1–Q4 through RG1–RG4; R39 and C6 to GND give the soft start"),
+ "FGC": ("#9575cd", "Soft-start capacitor C6 (220 nF film to GND), joined to the gate bus through R39 100 Ω"),
  # pre-charge
  "PCG": ("#00838f", "Pre-charge P-FET Q5 gate: R1 47 kΩ and the 12 V zener D3 to VIN"),
  "PCD": ("#00acc1", "Q5 drain to the PTC F1"), "PCF": ("#26c6da", "PTC F1 to the two 22 Ω 2 W resistors R3, R4"),
