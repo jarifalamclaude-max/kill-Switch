@@ -6,14 +6,17 @@ KY-003 Hall module (A3144, 10k pull-up, LED) on J4 and a reed door contact on J6
 LiPo with internal resistance and lead inductance, the thruster cable, the ESC capacitor bank with idle and
 thruster current, a shorting switch, the magnet, and fault switches for the safety cases.
 
-Run with KiCad 7's python:  python3 run_tht.py [--only name] [--ctr 0.5]   -> results_tht.json, out_tht/<scenario>.cir/.csv
+Run with KiCad 7's python:  python3 run_tht.py [--board tht|smd] [--only name] [--ctr 0.5]
+    -> results_<board>.json, out_<board>/<scenario>.cir/.csv  (the SMD board has the same circuit with SMD parts:
+    their values are mapped to the same models by ALIAS / DIODES below)
 """
 import json, os, subprocess, sys
 import pcbnew
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 KIC = os.path.join(HERE, "..")
-OUT = os.path.join(HERE, "out_tht")
+BOARD = sys.argv[sys.argv.index("--board") + 1] if "--board" in sys.argv else "tht"
+OUT = os.path.join(HERE, "out_" + BOARD)
 SENSOR_NETS = {"RIN", "ROUT", "HALL", "V5S"}
 CTR = float(sys.argv[sys.argv.index("--ctr") + 1]) if "--ctr" in sys.argv else 1.0
 
@@ -33,12 +36,17 @@ def node(n):
     return n
 
 DIODES = {"P6KE18A": "DP6KE18A", "5KP28A": "D5KP28A", "1.5KE33A": "D15KE33A", "BZX55C12": "DZ12", "1N4744A": "DZ15", "1N4007": "D1N4007",
-          "1N4148": "D1N4148", "BAT85": "DBAT85"}
+          "1N4148": "D1N4148", "BAT85": "DBAT85",
+          # SMD board: same jobs, SMD packages (SMBJ15A ~ P6KE18A, SMCJ28A ~ 1.5KE33A, SMAZ15 = 1 W 15 V zener)
+          "SMBJ15A": "DP6KE18A", "SMCJ28A": "D15KE33A", "BZT52C12": "DZ12", "SMAZ15": "DZ15", "S1M": "D1N4007", "1N4148W": "D1N4148"}
+# same pin numbers as the through-hole part (DPAK 1 G/IN 2 tab 3 S/OUT, SOP-4 opto 1 A 2 K 3 E 4 C, SOIC-14 LM339)
+ALIAS = {"IRFR5305": "IRF9540N", "LM339D": "LM339N", "L7805CDT": "L7805CV", "MC78M05CDT": "L7805CV", "EL357N": "PC817", "EL817S": "PC817"}
 
 def board_lines(path):
     b = pcbnew.LoadBoard(path); L = []
     for fp in sorted(b.GetFootprints(), key=lambda f: f.GetReference()):
         ref, v = fp.GetReference(), fp.GetValue()
+        v = ALIAS.get(v.split()[0], v) if v else v
         n = {k: (node(x) if x else f"NC_{ref}_{k}") for k, x in nets_of(fp).items()}
         if ref.startswith(("H", "TP", "J")): continue
         if ref.startswith("RK"): L.append(f"R{ref} {n['1']} {n['2']} 1m")
@@ -46,11 +54,18 @@ def board_lines(path):
         elif ref.startswith("C"): L.append(f"C{ref} {n['1']} {n['2']} {val(v)}")
         elif ref == "F1": L.append(f"R{ref} {n['1']} {n['2']} 1.0")
         elif v == "IRFB3206": L.append(f"M{ref} {n['2']} {n['1']} {n['3']} IRFB3206")
+        elif v == "IPT007N06N": L.append(f"M{ref} {n['3']} {n['1']} {n['2']} IPT007")          # TOLL: 1 G, 2 S, 3 D (tab)
         elif v == "IRF9540N": L.append(f"M{ref} {n['2']} {n['1']} {n['3']} IRF9540N")
         elif v == "2N7000": L.append(f"M{ref} {n['3']} {n['2']} {n['1']} M2N7000")
         elif v == "2N3904": L.append(f"Q{ref} {n['3']} {n['2']} {n['1']} Q2N3904")
         elif v == "2N3906": L.append(f"Q{ref} {n['3']} {n['2']} {n['1']} Q2N3906")
         elif v == "BC327": L.append(f"Q{ref} {n['1']} {n['2']} {n['3']} QBC327")
+        # SOT-23 parts (SMD board): MOSFET 1 G 2 S 3 D, bipolar 1 B 2 E 3 C
+        elif v == "2N7002": L.append(f"M{ref} {n['3']} {n['1']} {n['2']} M2N7002")
+        elif v == "MMBT3904": L.append(f"Q{ref} {n['3']} {n['1']} {n['2']} Q2N3904")
+        elif v == "MMBT3906": L.append(f"Q{ref} {n['3']} {n['1']} {n['2']} Q2N3906")
+        elif v in ("BC807-40", "BC807"): L.append(f"Q{ref} {n['3']} {n['1']} {n['2']} QBC327")
+        elif v == "FQD11P06": L.append(f"M{ref} {n['2']} {n['1']} {n['3']} FQD11P06")
         elif ref.startswith("D"):
             model = DIODES.get(v) or ("DLEDB" if "blue" in v else "DLEDR")
             L.append(f"D{ref} {n['2']} {n['1']} {model}")
@@ -64,7 +79,7 @@ def board_lines(path):
     return L
 
 BASE = dict(VB=16.8, VBPWL=None, RINT=0.012, LBAT=1e-6, LOUT=0.5e-6, ROUT=3e-3, CESC=4000e-6, ESR=0.01, IIDLE=0.4,
-            T_END=3.2, MAG="0 0 0.2 0 0.2001 1 3.0 1 3.0001 0", ITHR="0 0 2.0 0 2.05 30 2.6 30 2.62 60 3.05 60 3.06 0",
+            T_END=3.2, MAG="0 0 0.2 0 0.2001 1 3.0 1 3.0001 0", ITHR="0 0 2.0 0 2.05 60 2.6 60 2.62 100 3.05 100 3.06 0",
             SHORT="0 0", HSTUCK=0, REED_WELD=0, GATEON=0, CUT="0 1", CUT5="0 1", HALLSHORT="0 0")
 
 SCEN = {
@@ -72,17 +87,17 @@ SCEN = {
     "normal_6S": dict(VB=25.2),
     "low_4S": dict(VB=13.0),
     "start_into_short": dict(SHORT="0 1", ITHR="0 0", MAG="0 0 0.2 0 0.2001 1"),
-    "short_while_running": dict(SHORT="0 0 2.3 0 2.3001 1", ITHR="0 0 2.0 0 2.05 30 3.2 30", MAG="0 0 0.2 0 0.2001 1", KILL_AT=2.3),
-    "short_while_running_6S": dict(VB=25.2, SHORT="0 0 2.3 0 2.3001 1", ITHR="0 0 2.0 0 2.05 30 3.2 30", MAG="0 0 0.2 0 0.2001 1", KILL_AT=2.3),
-    "chatter_0p8ms": dict(MAG="0 0 0.2 0 0.2001 1 2.2 1 2.2001 0 2.2008 0 2.2009 1", ITHR="0 0 2.0 0 2.05 30 3.2 30", T_END=2.6),
-    "dropout_10ms": dict(MAG="0 0 0.2 0 0.2001 1 2.2 1 2.2001 0 2.21 0 2.2101 1", ITHR="0 0 2.0 0 2.05 30 3.6 30", T_END=4.0),
-    "battery_sag_16v8_to_12v": dict(VBPWL="0 0 10u 16.8 2.65 16.8 2.85 12.0", ITHR="0 0 2.0 0 2.05 60 3.2 60", MAG="0 0 0.2 0 0.2001 1", T_END=3.2),
+    "short_while_running": dict(SHORT="0 0 2.3 0 2.3001 1", ITHR="0 0 2.0 0 2.05 100 3.2 100", MAG="0 0 0.2 0 0.2001 1", KILL_AT=2.3),
+    "short_while_running_6S": dict(VB=25.2, SHORT="0 0 2.3 0 2.3001 1", ITHR="0 0 2.0 0 2.05 100 3.2 100", MAG="0 0 0.2 0 0.2001 1", KILL_AT=2.3),
+    "chatter_0p8ms": dict(MAG="0 0 0.2 0 0.2001 1 2.2 1 2.2001 0 2.2008 0 2.2009 1", ITHR="0 0 2.0 0 2.05 100 3.2 100", T_END=2.6),
+    "dropout_10ms": dict(MAG="0 0 0.2 0 0.2001 1 2.2 1 2.2001 0 2.21 0 2.2101 1", ITHR="0 0 2.0 0 2.05 100 3.6 100", T_END=4.0),
+    "battery_sag_16v8_to_12v": dict(VBPWL="0 0 10u 16.8 2.65 16.8 2.85 12.0", ITHR="0 0 2.0 0 2.05 100 3.2 100", MAG="0 0 0.2 0 0.2001 1", T_END=3.2),
     "fault_hall_stuck": dict(HSTUCK=1),
     "fault_reed_welded": dict(REED_WELD=1),
     "fault_sensor_cable_cut": dict(MAG="0 0 0.2 0 0.2001 1", CUT="0 1 2.8 1 2.8001 0", KILL_AT=2.8),
     "fault_hall_vcc_cut": dict(CUT5="0 1 2.5 1 2.5001 0"),
     "fault_hall_signal_shorted": dict(HALLSHORT="0 0 2.5 0 2.5001 1"),
-    "hot_plug_magnet_in": dict(MAG="0 1", ITHR="0 0 2.0 0 2.05 30 3.05 30 3.06 0"),
+    "hot_plug_magnet_in": dict(MAG="0 1", ITHR="0 0 2.0 0 2.05 60 3.05 60 3.06 0"),
 }
 COLS = ["vin", "vout", "bus", "iout", "fg", "en", "arm", "pcg", "mag", "drv", "pcf", "v12f", "pcen", "done", "ramp", "vod"]
 
@@ -92,7 +107,7 @@ def netlist(sc):
     L = ["* kill switch (through-hole) scenario", f".include {os.path.join(HERE, 'models_tht.lib')}",
          ".model SREED SW(Vt=0.5 Vh=0.1 Ron=0.1 Roff=1e9)", ".model SCUT SW(Vt=0.5 Vh=0.1 Ron=0.01 Roff=1e9)",
          ".model SSHORT SW(Vt=0.5 Vh=0.1 Ron=2m Roff=1e9)", ".model SGON SW(Vt=0.5 Vh=0.1 Ron=10 Roff=1e9)"]
-    L += board_lines(os.path.join(KIC, "ks_tht.kicad_pcb"))
+    L += board_lines(os.path.join(KIC, f"ks_{BOARD}.kicad_pcb"))
     # the bought sensors at the end of their cables: one switch per wire (GND stays joined)
     L += ["XKY HALL_S V5S_S 0 MAG_H HSTUCK KY003", "SREED RIN_S ROUT_S MAG_R 0 SREED"]
     L += [f"Scut_{n} {n} {n}_S {'VCUT5' if n == 'V5S' else 'VCUT'} 0 SCUT" for n in sorted(SENSOR_NETS)]
@@ -155,7 +170,7 @@ def analyse(name, sc):
     res["v12f_V"] = max(col["v12f"][i] - col["vout"][i] for i in range(len(T)))
     res["vin_max_V"] = max(col["vin"]); res["vout_min_V"] = min(col["vout"])
     res["bus_end_V"] = col["bus"][-1]
-    for tt, lab in ((2.5, "30A"), (2.9, "60A")):
+    for tt, lab in ((2.5, "60A"), (2.9, "100A")):
         if T[-1] >= tt:
             a = at(tt); res[f"vds_{lab}_mV"] = (a["vin"] - a["vout"]) * 1e3; res[f"iout_{lab}_A"] = a["iout"]
     tm = p.get("KILL_AT")
@@ -188,10 +203,12 @@ def analyse(name, sc):
 
 if __name__ == "__main__":
     only = sys.argv[sys.argv.index("--only") + 1].split(",") if "--only" in sys.argv else list(SCEN)
-    path = os.path.join(HERE, "results_tht.json" if CTR == 1.0 else f"results_tht_ctr{CTR}.json")
-    allres = json.load(open(path)) if os.path.exists(path) else {}
+    path = os.path.join(HERE, f"results_{BOARD}.json" if CTR == 1.0 else f"results_{BOARD}_ctr{CTR}.json")
     for name in only:
         print("running", name, flush=True)
-        allres[name] = run(name, SCEN[name])
-        print(" ", json.dumps({k: (round(v, 4) if isinstance(v, float) else v) for k, v in allres[name].items()}), flush=True)
-        json.dump(allres, open(path, "w"), indent=1)
+        res = run(name, SCEN[name])
+        print(" ", json.dumps({k: (round(v, 4) if isinstance(v, float) else v) for k, v in res.items()}), flush=True)
+        # several runs may share the file (one process per scenario): re-read, update this scenario, swap in
+        allres = json.load(open(path)) if os.path.exists(path) else {}
+        allres[name] = res
+        tmp = f"{path}.{os.getpid()}"; json.dump(allres, open(tmp, "w"), indent=1); os.replace(tmp, path)

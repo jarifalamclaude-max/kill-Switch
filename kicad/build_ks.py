@@ -31,7 +31,7 @@ class Board:
             n = pcbnew.NETINFO_ITEM(self.b, name); self.b.Add(n); self.nets[name] = n
         return self.nets[name]
     def place(self, ref, lib, name, x, y, rot, value, padnets, back=False, ref_at=None, ref_size=0.8, hide_ref=False):
-        fp = (reed_footprint(self.b) if name is None else nettie_footprint(self.b)) if lib is None else pcbnew.FootprintLoad(FP + lib + ".pretty", name)
+        fp = (reed_footprint(self.b) if name is None else nettie_footprint(self.b)) if lib is None else pcbnew.FootprintLoad(lib if lib.endswith(".pretty") else FP + lib + ".pretty", name)
         if lib is not None: fp.SetFPID(pcbnew.LIB_ID(lib, name))
         fp.SetReference(ref); fp.SetValue(value); self.b.Add(fp)
         fp.SetPosition(self.P(x, y)); fp.SetOrientationDegrees(rot)
@@ -100,7 +100,7 @@ def auto_refs(B, edge):
     obstacles = []
     for fp in b.GetFootprints(): obstacles += boxes_of_fp(fp, 0.2)
     for d in b.GetDrawings():
-        if d.GetLayer() == pcbnew.F_SilkS:
+        if d.GetLayer() in (pcbnew.F_SilkS, pcbnew.F_Mask):            # silk text/logo and bare copper strips
             bb = d.GetBoundingBox(); placed.append((pcbnew.ToMM(bb.GetLeft()), pcbnew.ToMM(bb.GetTop()), pcbnew.ToMM(bb.GetRight()), pcbnew.ToMM(bb.GetBottom())))
     def hit(bx, lst): return any(bx[0] < o[2] and o[0] < bx[2] and bx[1] < o[3] and o[1] < bx[3] for o in lst)
     x0e, y0e, x1e, y1e = [OX + v for v in edge]

@@ -1,0 +1,55 @@
+qty,value,footprint,refs,buy
+1,47u 50V,CP_Elec_6.3x7.7,C1,"SMD aluminium electrolytic 47 uF 50 V, 6.3 x 7.7 mm"
+2,10u 25V,C_1206_3216Metric,C2 C4,MLCC 10 uF 25 V X5R/X7R 1206
+2,100n,C_0805_2012Metric,C3 C8,MLCC 100 nF 50 V X7R 0805
+1,22u 25V,C_1206_3216Metric,C5,MLCC 22 uF 25 V X5R/X7R 1206
+1,220n 100V X7R,C_1206_3216Metric,C6,MLCC 220 nF 100 V X7R 1206
+1,10u 16V tantalum,CP_EIA-3216-18_Kemet-A,C7,"tantalum 10 uF 16 V, case A (3216)"
+2,10n,C_0805_2012Metric,C9 C10,MLCC 10 nF 50 V X7R 0805
+1,3.3u X7R 50V,C_1206_3216Metric,C11,MLCC 3.3 uF 50 V X7R 1206
+2,SMCJ28A,D_SMC,D1 D2,"SMCJ28A TVS (SMC, 1500 W, 28 V standoff) - BOTTOM side, between the XT90 pins"
+1,BZT52C12,D_SOD-123,D3,BZT52C12 zener 12 V (SOD-123)
+1,S1M,D_SMA,D4,S1M diode 1 A 1000 V (SMA)
+1,SMAZ15,D_SMA,D5,SMAZ15 zener 15 V 1 W (SMA)
+2,1N4148W,D_SOD-123,D6 D10,1N4148W (SOD-123)
+1,blue HALL,LED_0805_2012Metric,D7,LED 0805 blue
+1,blue REED,LED_0805_2012Metric,D8,LED 0805 blue
+1,red LIVE,LED_0805_2012Metric,D9,LED 0805 red
+1,SMBJ15A,D_SMB,D11,"SMBJ15A TVS (SMB, 600 W, 15 V standoff)"
+1,"MF-SM050/60-2 (0.5 A, 60 V)",Fuse_2920_7451Metric,F1,"Bourns MF-SM050/60-2 PTC fuse (0.5 A hold, 60 V, 2920 size; LCSC C3760688)"
+1,XT90PW-M battery IN,AMASS_XT90PW-M_1x02_P10.90mm_Horizontal,J1,"AMASS XT90PW-M (male, PCB right-angle) - mates with the battery's XT90; rated 45 A continuous / 90 A burst"
+1,XT90PW-F ESC OUT,AMASS_XT90PW-F_1x02_P10.90mm_Horizontal,J2,"AMASS XT90PW-F (female, PCB right-angle) - the ESC harness plugs in here; rated 45 A continuous / 90 A burst"
+1,HALL MODULE (KY-003: S + -),JST_XH_B3B-XH-A_1x03_P2.50mm_Vertical,J3,JST XH 3-pin header B3B-XH-A + housing XHP-3; KY-003 Hall module
+1,REED (MC-38),JST_XH_B2B-XH-A_1x02_P2.50mm_Vertical,J4,JST XH 2-pin header B2B-XH-A + housing XHP-2; MC-38 wired door contact (closed with the magnet)
+4,IPT007N06N,Infineon_PG-HSOF-8-1_ThermalVias,Q1 Q2 Q3 Q4,"Infineon IPT007N06N (TOLL / PG-HSOF-8-1, 60 V, 0.75 mOhm max): the drain is the big pad underneath - reflow or hot air"
+1,FQD11P06,TO-252-2,Q11,"onsemi FQD11P06TM (DPAK, -60 V P-MOSFET) - pre-charge switch"
+3,2N7002,SOT-23,Q12 Q16 Q17,"2N7002 (SOT-23: 1 G, 2 S, 3 D)"
+1,MMBT3906,SOT-23,Q13,"MMBT3906 (SOT-23: 1 B, 2 E, 3 C)"
+2,MMBT3904,SOT-23,Q14 Q15,"MMBT3904 (SOT-23: 1 B, 2 E, 3 C)"
+1,BC807-40,SOT-23,Q18,"BC807-40 (SOT-23 PNP: 1 B, 2 E, 3 C)"
+3,47k,R_0805_2012Metric,R1 R11 R37,resistor 47k Ohm 0805 1 % or 5 %
+2,22k,R_0805_2012Metric,R2 R34,resistor 22k Ohm 0805 1 % or 5 %
+2,22 2512,R_2512_6332Metric,R3 R4,"22 Ohm 2512 thick film, pulse-proof (1 W or more)"
+1,10,R_1206_3216Metric,R5,resistor 10 Ohm 1206 1 % or 5 %
+9,10k,R_0805_2012Metric,R6 R7 R10 R16 R17 R18 R29 R30 R35,resistor 10k Ohm 0805 1 % or 5 %
+3,100,R_0805_2012Metric,R8 R9 R39,resistor 100 Ohm 0805 1 % or 5 %
+2,4.7k,R_0805_2012Metric,R12 R33,resistor 4.7k Ohm 0805 1 % or 5 %
+5,1k,R_0805_2012Metric,R13 R14 R28 R31 R38,resistor 1k Ohm 0805 1 % or 5 %
+2,100k,R_0805_2012Metric,R15 R19,resistor 100k Ohm 0805 1 % or 5 %
+1,220,R_0805_2012Metric,R20,resistor 220 Ohm 0805 1 % or 5 %
+1,75k 1%,R_0805_2012Metric,R21,resistor 75k Ohm 0805 1 %
+2,10k 1%,R_0805_2012Metric,R22 R25,resistor 10k Ohm 0805 1 %
+1,470k,R_0805_2012Metric,R23,resistor 470k Ohm 0805 1 % or 5 %
+1,160k 1%,R_0805_2012Metric,R24,resistor 160k Ohm 0805 1 %
+5,1M,R_0805_2012Metric,R26 RS1 RS2 RS3 RS4,resistor 1M Ohm 0805 1 % or 5 %
+1,68k,R_0805_2012Metric,R27,resistor 68k Ohm 0805 1 % or 5 %
+1,330,R_0805_2012Metric,R32,resistor 330 Ohm 0805 1 % or 5 %
+1,47,R_0805_2012Metric,R36,resistor 47 Ohm 0805 1 % or 5 %
+4,10,R_0805_2012Metric,RG1 RG2 RG3 RG4,resistor 10 Ohm 0805 1 % or 5 %
+2,0R,R_1206_3216Metric,RK1 RK2,0 Ohm 1206 jumper
+1,L7805CDT,TO-252-2,U1,"ST L7805CDT-TR (DPAK, tab = GND)"
+1,LM339D,SOIC-14_3.9x8.7mm_P1.27mm,U2,LM339DR (SOIC-14)
+1,B0512S-1WR3,PinHeader_1x04_P2.54mm_Vertical,U3,"Mornsun B0512S-1WR3 (5 V -> 12 V isolated, 1 W, SIP-4, through-hole): pins 1 GND, 2 Vin, 3 0V, 4 +Vo - check yours"
+1,EL357N,SOP-4_4.4x2.6mm_P1.27mm,U4,"Everlight EL357N(C)(TA)-G optocoupler (SOP-4, CTR 50-600 %; pins 1 A, 2 K, 3 E, 4 C)"
+1,8 AWG bare copper,-,-,"8 AWG (8 mm2) bare solid copper wire, about 15 cm: VIN strip 45 mm, VOUT strip 45 mm + 22 mm, GND link 12 mm under the board between the XT90 minus pins - tin the strips and solder the wire along them"
+3,M3 nylon,-,H1 H2 H3,M3 nylon screw + nylon standoff (H3 sits next to the VIN copper)

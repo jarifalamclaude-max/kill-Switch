@@ -16,6 +16,8 @@ BUY = {
     "1.5KE33A": "1.5KE33A TVS (DO-201, 1500 W, 28.2 V standoff)", "P6KE18A": "P6KE18A TVS (DO-15, 600 W, 15.3 V standoff)",
     "1N4744A": "1N4744A zener 15 V 1 W (DO-41)", "1N4007": "1N4007 (DO-41)", "1N4148": "1N4148 (DO-35)", "BZX55C12": "BZX55C12 zener 12 V (DO-35)",
     "RXEF050": "Littelfuse RXEF050 radial PTC (0.5 A hold, 72 V)",
+    "XT90 IN": "AMASS XT90PW-M (male, PCB right-angle, 2 x 3.8 mm holes) - mates with the battery's XT90; rated 45 A continuous / 90 A burst",
+    "XT90 OUT": "AMASS XT90PW-F (female, PCB right-angle) - the ESC harness plugs in here; rated 45 A continuous / 90 A burst",
     "XT60 BATTERY": "AMASS XT60PW-M (male, PCB right-angle) - mates with the battery", "XT60 TO ESCs": "AMASS XT60PW-F (female, PCB right-angle) - the ESC harness plugs in here",
     "HALL MODULE": "JST XH 3-pin header B3B-XH-A + housing XHP-3; KY-003 Hall module", "REED (MC-38)": "JST XH 2-pin header B2B-XH-A + housing XHP-2; MC-38 wired door contact (closed with the magnet)",
     "0R": "0 Ohm jumper (or a wire link)", "22 2W": "22 Ohm 2 W metal oxide or metal film, axial",
@@ -69,6 +71,15 @@ def buy(value, fp):
         return f"{size} X7R ceramic" + (f", {v.group(1)}" if v else ", 25 V or more")
     return ""
 
+# things that are not footprints on the board but are needed to build it
+EXTRA = {"bom_tht.csv": [
+    (1, "8 AWG bare copper wire, about 0.35 m", "solid 8 AWG (3.3 mm, 8.4 mm2) or bare earthing wire: one length on the VOUT strip, one on the VIN strip (top), a C-shaped piece on the GND strip (bottom)"),
+    (1, "battery fuse 125-150 A", "ANL / MIDI / MEGA fuse in the battery + lead, close to the battery (protects the wiring; the board itself switches off a dead short in under 1 ms)"),
+    (2, "8 AWG silicone cable", "battery lead and ESC harness to the XT90 plugs, as short as possible"),
+    (1, "optional: flat bar 3 x 15 mm, 92 mm long", "copper or aluminium, 8 x M3 screw + nut + spring washer through the MOSFET tabs (all tabs are VIN, no insulators): extra cooling and an extra VIN path"),
+    (4, "M3 nylon standoff + screw", "board mounting (holes H1-H4)"),
+]}
+
 def main():
     src, dst = (sys.argv[1], sys.argv[2]) if len(sys.argv) > 2 else ("bom_power.csv", "bom_grouped.csv")
     rows = list(csv.DictReader(open(os.path.join(HERE, src))))
@@ -81,6 +92,8 @@ def main():
         for (v, fp), refs in out:
             if fp.startswith("TestPoint"): continue
             w.writerow([len(refs), v, fp, " ".join(sorted(refs, key=key)), buy(v, fp)])
+        for qty, what, note in EXTRA.get(os.path.basename(src), []):
+            w.writerow([qty, what, "-", "-", note])
     print(len(out), "lines ->", dst)
 
 if __name__ == "__main__":

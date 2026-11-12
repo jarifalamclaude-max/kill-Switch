@@ -1,12 +1,13 @@
 """Route the through-hole kill switch (ks_tht.kicad_pcb), run after build_tht.py with KiCad 7's python.
 
-1. Hand-routed on B.Cu: each gate pin -> its 10 Ohm and 1 MOhm, the gate bus, and the VIN_K link out of the
-   power section, so the VIN and VOUT pours on F.Cu stay whole.
-2. Grid router for everything else, with 0/45/90-degree segments only. F.Cu is kept out of the power pours;
-   wide tracks (0.9 mm) for the pre-charge path, 0.6 mm for supplies and the gate bus, 0.35 mm for signals.
+1. Hand-routed: each gate pin -> its 10 Ohm and 1 MOhm on B.Cu (under the tab and the VIN strip), the SRC trunk
+   (gate-drive ground, tapped from VOUT by RK2) and the SRC bus on B.Cu, the gate bus FG on F.Cu.
+2. Grid router for everything else, 0/45/90-degree segments only, kept out of the power section;
+   wide tracks (0.9 mm) for the pre-charge path, 0.6 mm for supplies, 0.35 mm for signals.
 3. Every 90-degree corner the router leaves is cut at 45 degrees (where the cut clears other copper).
-4. Pours: VIN and VOUT on F.Cu (solid to the pads), GND on both layers (thermal spokes; solid on the XT60 and
-   TVS pins), then the BRACU Duburi logo and the designer's name, zone fill, DRC report.
+4. Pours: VOUT above the MOSFET pins and VIN below them on both layers (solid to the pads), GND on both layers;
+   bare strips (no mask) for 8 AWG wire on VOUT, VIN and the GND link; logo, name, zone fill, DRC report;
+   3D models copied into the project (bundle_3d.py) so the 3D view works in any KiCad version.
 """
 import os, sys, math
 import numpy as np
@@ -17,18 +18,17 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 from gridroute import GridRouter
 from route_ks import helpers, trim_dangling, OX, OY, P, mm
-from build_tht import W, H, FET_X, NFET
+from build_tht import W, H, FET_X, NFET, ROW_Y
 
 B_CU, F_CU = pcbnew.B_Cu, pcbnew.F_Cu
 NAME = "Md. Jarif Alam 13"
-VIN_POLY = [(0.0, 0.0), (110.0, 0.0), (110.0, 13.97), (15.0, 13.97), (15.0, 16.5), (0.0, 16.5)]
-VOUT_POLY = [(23.0, 13.97), (118.0, 13.97), (118.0, 30.0), (23.0, 30.0)]
+# VOUT: everything above the pin row except the GND pocket of J2- and D2; VIN: from the pin row down to the resistors
+VOUT_POLY = [(35.2, 0.0), (W, 0.0), (W, ROW_Y), (20.4, ROW_Y), (20.4, 8.9), (35.2, 8.9)]
+VIN_POLY = [(20.4, ROW_Y), (W, ROW_Y), (W, 32.0), (35.2, 32.0), (35.2, 31.2), (20.4, 31.2)]
+LOGO = (103.5, 1.0)                                # top-left of the BRACU Duburi logo (top-right corner, on the VOUT plane)
 CLR = 0.45                                         # track to other copper: room for hand soldering, nothing between pins
 WIDE = {"PCD": 0.9, "PCF": 0.9}
-# (mask layer, rectangle): VIN on top above the MOSFET pins, VOUT on top between the 1 MOhm and 10 Ohm resistors,
-# GND underneath from the battery XT60 to the ESC XT60
-WIRE_STRIPS = [(pcbnew.F_Mask, (12.0, 7.3, 80.0, 8.9)), (pcbnew.F_Mask, (36.0, 21.7, 109.0, 23.7)),
-               (pcbnew.B_Mask, (31.0, 7.3, 108.6, 8.9)), (pcbnew.B_Mask, (107.0, 8.9, 108.6, 24.0))]
+SRC_BUS_Y, FG_BUS_Y = 37.47, 41.28    # 3.8 mm apart: VIN_K crosses both with one via
 MID = {"VIN_K": 0.6, "SRC": 0.6, "V5": 0.6, "V12F": 0.5, "FG": 0.6, "VR1": 0.6, "VR2": 0.6, "DRV": 0.4}
 
 BODIES = []
@@ -37,7 +37,7 @@ def bodies(b):
     out = []
     for fp in b.GetFootprints():
         ref = fp.GetReference()
-        if ref.startswith(("H", "TP", "J1", "J2")) or ref in ("Q1", "Q2", "Q3", "Q4", "Q5"): continue
+        if ref.startswith(("H", "TP", "J1", "J2")) or ref in [f"Q{i}" for i in range(1, NFET + 1)] + ["D1", "D2"]: continue
         xs, ys = [], []
         for g in fp.GraphicalItems():
             if g.GetLayer() == pcbnew.F_CrtYd:
@@ -221,23 +221,28 @@ def main():
     path = os.path.join(HERE, "ks_tht.kicad_pcb")
     b = pcbnew.LoadBoard(path)
     pad_xy, route, zone, keepout, mask_open = helpers(b)
-    # 1. hand routes on B.Cu
+    # 1. hand routes. B.Cu: gate pin -> 10 Ohm -> 1 MOhm; SRC trunk from RK2 (VOUT) down between Q1 and Q2 to the
+    #    SRC bus that joins the 1 MOhm resistors. F.Cu: the gate bus FG under the resistors, out to TP1.
     for i in range(1, NFET + 1):
         route(f"G{i}", 0.6, (f"Q{i}", "1"), (f"RG{i}", "1"), layer=B_CU)
         route(f"G{i}", 0.5, (f"RG{i}", "1"), (f"RS{i}", "1"), layer=B_CU)
-    bus = [(f"RG{i}", "2") for i in range(1, NFET + 1)] + [("TP1", "1")]
-    route("FG", 0.6, *bus, layer=B_CU)
+    trunk = pad_xy("RK2", "2")
+    src_x = sorted([pad_xy(f"RS{i}", "2")[0] for i in range(1, NFET + 1)] + [trunk[0] + 1.27])
+    jog = trunk[0] + 1.27                               # step right below the pin row to clear RS1
+    route("SRC", 0.8, trunk, (trunk[0], 29.0), (jog, 29.0 + 1.27), (jog, SRC_BUS_Y), layer=B_CU)
+    for i in range(1, NFET + 1):
+        p = pad_xy(f"RS{i}", "2"); route("SRC", 0.6, p, (p[0], SRC_BUS_Y), layer=B_CU)
+    route("SRC", 0.8, *[(x, SRC_BUS_Y) for x in src_x], layer=B_CU)
     tp = pad_xy("TP1", "1")
-    route("FG", 0.6, tp, (tp[0], 32.0), layer=B_CU)            # gate bus leaves the power section at its right end
-    vk = pad_xy("RK1", "2")
-    route("VIN_K", 0.6, vk, (vk[0], 15.24), (vk[0] - 1.27, 16.51), (vk[0] - 1.27, 31.0), layer=F_CU)   # on F.Cu: the
-    # B.Cu GND plane under the power section stays whole for the return current between the XT60s
-    # the 22 Ohm pre-charge resistors end left of VIN_K: join them to VOUT at RK2 underneath
-    route("VOUT", 0.9, ("R4", "2"), ("R3", "2"), ("RK2", "1"), layer=B_CU)
+    fg_x = [tp[0]] + [pad_xy(f"RG{i}", "2")[0] for i in range(1, NFET + 1)]
+    for i in range(1, NFET + 1):
+        p = pad_xy(f"RG{i}", "2"); route("FG", 0.6, p, (p[0], FG_BUS_Y), layer=F_CU)
+    route("FG", 0.6, *[(x, FG_BUS_Y) for x in fg_x], layer=F_CU)
     BODIES[:] = bodies(b)
-    # 2. router: wide, medium, then signal nets; F.Cu stays out of the power pours
-    keep = [(x0, y0, x1, y1, 0) for (x0, y0, x1, y1) in ((0.0, 0.0, 110.0, 13.97), (0.0, 13.97, 15.0, 16.5), (23.0, 13.97, 118.0, 30.0))]
-    keep.append((24.0, 0.0, W, 31.5, 1))        # B.Cu under the power section carries the GND current between the XT60s
+    # 2. router: wide, medium, then signal nets; both layers stay out of the power section and the XT90s
+    keep = []
+    for (x0, y0, x1, y1) in ((0.0, 0.0, 29.6, 45.0), (20.4, 0.0, W, ROW_Y + 1.3), (20.4, ROW_Y - 1.3, W, 32.2)):
+        keep += [(x0, y0, x1, y1, 0), (x0, y0, x1, y1, 1)]
     code = lambda n: b.FindNet(n).GetNetCode()
     skip = {"VIN", "VOUT", "GND", ""}
     all_nets = {p.GetNetCode() for fp in b.GetFootprints() for p in fp.Pads() if p.GetNetname() not in skip}
@@ -251,7 +256,9 @@ def main():
     print("  corners cut:", chamfer_corners(b, keep), " 90-degree corners left:", corners_left(b))
     # 4. pours
     zone("VIN", F_CU, VIN_POLY, prio=3, thermal=False, name="VIN_top")
+    zone("VIN", B_CU, VIN_POLY, prio=3, thermal=False, name="VIN_bot")
     zone("VOUT", F_CU, VOUT_POLY, prio=2, thermal=False, name="VOUT_top")
+    zone("VOUT", B_CU, VOUT_POLY, prio=2, thermal=False, name="VOUT_bot")
     whole = [(0.0, 0.0), (W, 0.0), (W, H), (0.0, H)]
     zone("GND", F_CU, whole, prio=1, name="GND_top")
     zone("GND", B_CU, whole, prio=1, name="GND_bot")
@@ -262,22 +269,22 @@ def main():
         iso = isolated_gnd_pads(b, path)
         if not iso: break
         print("  isolated GND pads:", iso, "joined:", join_gnd_pads(b, keep, iso))
-    # bare copper strips along the three current paths: solder a 12 AWG bare copper wire (or thick solder) on them
-    for layer, (x0, y0, x1, y1) in WIRE_STRIPS: mask_open(layer, x0, y0, x1, y1)
+    # the bare copper strips for the 8 AWG wires (build_tht.WIRE_STRIPS) are already on the mask layers
     # branding: logo in the free corner of the VIN band, name under it
-    hl = logo(b, pcbnew.F_SilkS, 84.0, 1.4, 21.0)
-    t = pcbnew.PCB_TEXT(b); t.SetText(NAME); t.SetLayer(pcbnew.F_SilkS); t.SetPosition(P(94.5, 1.4 + hl + 1.3))
+    hl = logo(b, pcbnew.F_SilkS, LOGO[0], LOGO[1], 18.0)
+    t = pcbnew.PCB_TEXT(b); t.SetText(NAME); t.SetLayer(pcbnew.F_SilkS); t.SetPosition(P(LOGO[0] + 9.0, LOGO[1] + hl + 1.3))
     t.SetTextSize(pcbnew.VECTOR2I(mm(1.0), mm(1.0))); t.SetTextThickness(mm(0.16)); b.Add(t)
     pcbnew.ZONE_FILLER(b).Fill(b.Zones())
     pcbnew.SaveBoard(path, b)
-    # the XT60 bodies overhang the board edge on purpose: their outline silkscreen is clipped there
+    # the XT90 outlines touch the board edge: their silkscreen is clipped there
     import json
     pro = path.replace(".kicad_pcb", ".kicad_pro")
     d = json.load(open(pro)); d["board"]["design_settings"]["rule_severities"]["silk_edge_clearance"] = "ignore"
-    d["board"]["design_settings"]["rule_severities"]["lib_footprint_mismatch"] = "ignore"   # extra 3D model paths
+    d["board"]["design_settings"]["rule_severities"]["lib_footprint_mismatch"] = "ignore"   # 3D models point into the project
+    d["board"]["design_settings"]["rule_severities"]["lib_footprint_issues"] = "ignore"     # XT90s come from the project library ks.pretty
     d["board"]["design_settings"]["rule_severities"]["silk_over_copper"] = "ignore"         # silk clipped on the bare wire strips
     json.dump(d, open(pro, "w"), indent=2)
-    import fix_3d_models; fix_3d_models.fix(path)           # 3D models for KiCad 7, 8 and 9
+    import bundle_3d; bundle_3d.bundle(path)                 # 3D models inside the project: any KiCad version shows them
     drc(path)
 
 def drc(path):

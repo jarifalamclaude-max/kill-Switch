@@ -1,0 +1,4 @@
+(fp_lib_table
+  (version 7)
+  (lib (name "ks")(type "KiCad")(uri "${KIPRJMOD}/ks.pretty")(options "")(descr "Kill switch parts: AMASS XT90PW-M / XT90PW-F"))
+)

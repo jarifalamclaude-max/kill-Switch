@@ -5,3 +5,6 @@ __pycache__/
 *.kicad_prl
 *-backups/
 fp-info-cache
+kicad/simulation/out_smd/
+kicad/simulation/out_smd_ctr0.5/
+kicad/simulation/out_*/

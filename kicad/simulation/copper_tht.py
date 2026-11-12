@@ -1,11 +1,12 @@
-"""DC current in the power copper of ks_tht.kicad_pcb (KiCad 7's python, numpy, PIL; no scipy needed).
+"""DC current in the power copper of ks_<board>.kicad_pcb (KiCad 7's python, numpy, PIL; no scipy needed).
 
 The filled pours, tracks and pads of VIN, VOUT and GND are rasterised on a 0.25 mm grid and solved as a resistor
-grid of 2 oz copper (70 um, 0.246 mOhm per square at 20 C). The 4 MOSFETs are 3.34 mOhm each (3.0 max + legs)
-between their drain and source pads, so the solve also gives how the current shares between them.
-Writes copper_tht.json and copper_<path>.png (current density maps) next to this file.
+grid of 2 oz copper (70 um, 0.246 mOhm per square at 20 C). Each power MOSFET is its datasheet maximum Rds(on)
+(+ legs/joints) between its drain and source pads, so the solve also gives how the current shares between them.
+With --wires, an 8 AWG bare copper wire (8.37 mm2) lies on every bare strip (F.Mask / B.Mask opening).
+Writes copper_<board>[_wires].json and copper_<board>_<net>[_wires].png (current density maps) next to this file.
 
-Run:  python3 copper_tht.py
+Run:  python3 copper_tht.py [--board tht|smd] [--wires]
 """
 import json, math, os, sys
 import numpy as np
@@ -13,13 +14,16 @@ import pcbnew
 from PIL import Image, ImageDraw
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-PCB = os.path.join(HERE, "..", "ks_tht.kicad_pcb")
+BOARD = sys.argv[sys.argv.index("--board") + 1] if "--board" in sys.argv else "tht"
+PCB = os.path.join(HERE, "..", f"ks_{BOARD}.kicad_pcb")
 OX = OY = 100.0
 G = 0.25                                  # mm per cell
-W, H = 120.0, 98.0
+_bb = pcbnew.LoadBoard(PCB).GetBoardEdgesBoundingBox()
+W, H = round(pcbnew.ToMM(_bb.GetWidth()), 2), round(pcbnew.ToMM(_bb.GetHeight()), 2)
 NX, NY = int(round(W / G)), int(round(H / G))
 R_SQ = 1.72e-8 / 70e-6                    # ohm per square, 2 oz copper at 20 C
-R_FET = 3.34e-3                           # IRFB3206: 3.0 mOhm max + 0.34 mOhm legs and joints
+# power MOSFET: (drain pad, source pad, Rds(on) max at 25 C + legs/joints)
+FETS = {"IRFB3206": ("2", "3", 3.34e-3), "IPT007N06N": ("3", "2", 0.80e-3)}
 G_CELL = 1.0 / R_SQ
 
 def mm_xy(v): return (pcbnew.ToMM(v.x) - OX) / G, (pcbnew.ToMM(v.y) - OY) / G
@@ -114,10 +118,10 @@ def heat_png(name, dens, mask, scale):
     Image.fromarray(rgb).resize((NX * 2, NY * 2), Image.NEAREST).save(os.path.join(HERE, f"copper_{name}.png"))
 
 WIRES = "--wires" in sys.argv
-AWG12_MM2 = 3.31
+AWG8_MM2 = 8.37
 
 def wire_boost(b):
-    """Conductance multiplier where a 12 AWG bare wire lies on a bare strip (F.Mask -> F.Cu, B.Mask -> B.Cu)."""
+    """Conductance multiplier where an 8 AWG bare wire lies on a bare strip (F.Mask -> F.Cu, B.Mask -> B.Cu)."""
     k = np.ones((2, NY, NX))
     for d in b.GetDrawings():
         if d.GetLayer() not in (pcbnew.F_Mask, pcbnew.B_Mask): continue
@@ -126,7 +130,7 @@ def wire_boost(b):
         x1, y1 = (pcbnew.ToMM(bb.GetRight()) - OX) / G, (pcbnew.ToMM(bb.GetBottom()) - OY) / G
         width_mm = min(x1 - x0, y1 - y0) * G
         li = 0 if d.GetLayer() == pcbnew.F_Mask else 1
-        k[li, int(y0):int(math.ceil(y1)), int(x0):int(math.ceil(x1))] = 1 + AWG12_MM2 / (width_mm * 0.070)
+        k[li, int(y0):int(math.ceil(y1)), int(x0):int(math.ceil(x1))] = 1 + AWG8_MM2 / (width_mm * 0.070)
     return k
 
 def main():
@@ -135,7 +139,10 @@ def main():
     F, B = pcbnew.F_Cu, pcbnew.B_Cu
     fp = lambda r: b.FindFootprintByReference(r)
     pad = lambda r, n: [p for p in fp(r).Pads() if p.GetNumber() == n][0]
-    out = {"grid_mm": G, "copper": "2 oz (70 um), 20 C", "r_fet_mohm": R_FET * 1e3, "wires_12awg_on_strips": WIRES}
+    qs = sorted([f for f in b.GetFootprints() if f.GetValue() in FETS], key=lambda f: int(f.GetReference()[1:]))
+    N = len(qs); dpad, spad, R_FET = FETS[qs[0].GetValue()]
+    out = {"board": BOARD, "grid_mm": G, "copper": "2 oz (70 um), 20 C", "n_fets": N, "fet": qs[0].GetValue(),
+           "r_fet_mohm": R_FET * 1e3, "wires_8awg_on_strips": WIRES}
     # VIN (F.Cu pour + B.Cu bits of the net) and VOUT: unit current at each MOSFET pad, one at a time
     vin = Grid([raster(b, "VIN", F), raster(b, "VIN", B)], np.zeros((NY, NX)))
     vout = Grid([raster(b, "VOUT", F), raster(b, "VOUT", B)], np.zeros((NY, NX)))
@@ -146,19 +153,24 @@ def main():
         for p in pads_of(b, net): links = np.maximum(links, pad_cells(p, (NY, NX)).astype(float))
         gr.gz = links * gr.m[0] * gr.m[1] * G_CELL * 50.0
     j1p = pad_cells(pad("J1", "2"), (2, NY, NX)); j2p = pad_cells(pad("J2", "2"), (2, NY, NX))
-    drains = [pad_cells(pad(f"Q{k}", "2"), (2, NY, NX)) for k in range(1, 5)]
-    sources = [pad_cells(pad(f"Q{k}", "3"), (2, NY, NX)) for k in range(1, 5)]
-    Rin = np.zeros((4, 4)); Rout = np.zeros((4, 4)); Vin_u, Vout_u = [], []
-    for j in range(4):
+    def cells(f, num):
+        m = np.zeros((2, NY, NX), dtype=bool)
+        for p in f.Pads():
+            if p.GetNumber() == num: m |= pad_cells(p, (2, NY, NX))
+        return m
+    drains = [cells(f, dpad) for f in qs]
+    sources = [cells(f, spad) for f in qs]
+    Rin = np.zeros((N, N)); Rout = np.zeros((N, N)); Vin_u, Vout_u = [], []
+    for j in range(N):
         inj = -(drains[j] * vin.m) / max(np.sum(drains[j] * vin.m), 1)         # 1 A leaves the VIN copper at drain j
         v = vin.solve(j1p, inj); Vin_u.append(v)
-        for k in range(4): Rin[k, j] = -mean_v(v, drains[k] * vin.m)
+        for k in range(N): Rin[k, j] = -mean_v(v, drains[k] * vin.m)
         inj = sources[j] * vout.m / max(np.sum(sources[j] * vout.m), 1)       # 1 A enters the VOUT copper at source j
         v = vout.solve(j2p, inj); Vout_u.append(v)
-        for k in range(4): Rout[k, j] = mean_v(v, sources[k] * vout.m)
-    # share: Rin I + R_FET I + Rout I = V (same for all four), sum I = 1
-    A = np.zeros((5, 5)); A[:4, :4] = Rin + Rout + np.eye(4) * R_FET; A[:4, 4] = -1; A[4, :4] = 1
-    sol = np.linalg.solve(A, np.r_[np.zeros(4), 1.0]); share = sol[:4]; r_total = sol[4]
+        for k in range(N): Rout[k, j] = mean_v(v, sources[k] * vout.m)
+    # share: Rin I + R_FET I + Rout I = V (same for all), sum I = 1
+    A = np.zeros((N + 1, N + 1)); A[:N, :N] = Rin + Rout + np.eye(N) * R_FET; A[:N, N] = -1; A[N, :N] = 1
+    sol = np.linalg.solve(A, np.r_[np.zeros(N), 1.0]); share = sol[:N]; r_total = sol[N]
     out["fet_share"] = [round(float(s), 4) for s in share]
     out["r_total_mohm"] = r_total * 1e3
     out["r_vin_copper_mohm"] = float(np.dot(share, Rin @ share) * 1e3)
@@ -175,14 +187,14 @@ def main():
     j1m = pad_cells(pad("J1", "1"), (2, NY, NX)); j2m = pad_cells(pad("J2", "1"), (2, NY, NX))
     vg = gnd.solve(j1m, j2m * gnd.m / max(np.sum(j2m * gnd.m), 1))
     out["r_gnd_copper_mohm"] = mean_v(vg, j2m * gnd.m) * 1e3
-    # full-current pictures and numbers at 30 A and 60 A
+    # full-current pictures and numbers at 60 A and 100 A
     v_in = sum(s * v for s, v in zip(share, Vin_u)); v_out = sum(s * v for s, v in zip(share, Vout_u))
     for name, gr, v in (("vin", vin, v_in), ("vout", vout, v_out), ("gnd", gnd, vg)):
         dens = gr.density(v)                                     # A/mm per amp of total current
         k = np.unravel_index(np.argmax(dens), dens.shape)
         out[f"{name}_peak_A_per_mm_per_A"] = float(dens[k]); out[f"{name}_peak_at_mm"] = [round(k[2] * G, 2), round(k[1] * G, 2), "F.Cu" if k[0] == 0 else "B.Cu"]
-        heat_png(name + ("_wires" if WIRES else ""), dens * 60.0, gr.m > 0, 6.0)   # colour scale: 0 .. 6 A/mm at 60 A
-    for I in (30.0, 60.0):
+        heat_png(f"{BOARD}_{name}" + ("_wires" if WIRES else ""), dens * 100.0, gr.m > 0, 10.0)   # colour scale: 0 .. 10 A/mm at 100 A
+    for I in (60.0, 100.0):
         tag = f"{int(I)}A"
         rc = out["r_vin_copper_mohm"] + out["r_vout_copper_mohm"] + out["r_gnd_copper_mohm"]
         out[f"copper_drop_{tag}_mV"] = rc * I
@@ -192,7 +204,7 @@ def main():
         for name in ("vin", "vout", "gnd"):
             out[f"{name}_loss_{tag}_W"] = out[f"r_{name}_copper_mohm"] * 1e-3 * I * I
             out[f"{name}_peak_{tag}_A_per_mm"] = out[f"{name}_peak_A_per_mm_per_A"] * I
-    json.dump(out, open(os.path.join(HERE, "copper_tht_wires.json" if WIRES else "copper_tht.json"), "w"), indent=1)
+    json.dump(out, open(os.path.join(HERE, f"copper_{BOARD}_wires.json" if WIRES else f"copper_{BOARD}.json"), "w"), indent=1)
     for k, v in out.items(): print(k, v if not isinstance(v, float) else round(v, 4))
 
 if __name__ == "__main__":
