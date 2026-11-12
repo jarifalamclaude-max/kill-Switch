@@ -22,9 +22,11 @@ import pcbnew
 HERE = os.path.dirname(os.path.abspath(__file__))
 PCB = os.path.join(HERE, "..", "kicad", "ks_tht.kicad_pcb")
 HTML = os.path.join(HERE, "index.html")
-W, H, PX = 120.0, 98.0, 20.0                   # board size (mm), texture pixels per mm
+W, H, PX = 123.0, 100.0, 20.0                  # board size (mm, checked against Edge.Cuts below), texture pixels per mm
 OX = OY = 100.0
-MASK, MASK_CU, SILK, PAD, FR4, HOLE = (29, 91, 50), (40, 112, 62), (236, 238, 238), (214, 216, 218), (196, 170, 110), (13, 13, 13)
+# green mask, white silk, silver HASL: the colours of docs/board_tht_top.png
+MASK, MASK_CU, SILK, PAD, FR4, HOLE = (22, 92, 48), (40, 130, 66), (245, 245, 240), (205, 208, 214), (196, 178, 120), (25, 25, 25)
+SHARE = os.path.join(HERE, "..", "kicad", "simulation", "copper_tht_wires.json")
 mm = pcbnew.ToMM
 LAYERS = ((0, pcbnew.F_Cu), (1, pcbnew.B_Cu))
 
@@ -39,6 +41,8 @@ def render(layer, tmp):
     return np.asarray(Image.open(png).convert("L")) < 128                 # True where the layer has ink
 
 def textures(b):
+    bb = b.GetBoardEdgesBoundingBox()
+    if abs(mm(bb.GetWidth()) - W) > 0.3 or abs(mm(bb.GetHeight()) - H) > 0.3: raise SystemExit(f"board is {mm(bb.GetWidth()):.1f} x {mm(bb.GetHeight()):.1f} mm, not {W} x {H}")
     with tempfile.TemporaryDirectory() as tmp:
         edge = render("Edge.Cuts", tmp)
         ys, xs = np.nonzero(edge)
@@ -285,53 +289,56 @@ class PourMap:
 #   ("@", "REF.PAD", "REF.PAD", style)          through the part (pad to pad)
 #   ("~NET", layer, "REF.PAD", "REF.PAD", style) through that net's pour on layer 0 (F.Cu) or 1 (B.Cu)
 # styles: "main" (the big current), "ret" (its return), "sig" (this path's own current), "ctl" (a control signal)
-FETS = [f"Q{i}" for i in range(1, 5)]
-DRAIN_X = [36.83, 49.53, 62.23, 74.93]; SRC_X = [39.37, 52.07, 64.77, 77.47]
-WV, WO, WG = 8.1, 22.7, 107.8              # centre lines of the VIN wire (top), VOUT wire (top) and the GND wire (bottom)
+NF = 8
+FETS = [f"Q{i}" for i in range(1, NF + 1)]
+DRAIN_X = [34.29 + 11.43 * i for i in range(NF)]; SRC_X = [31.75 + 11.43 * i for i in range(NF)]   # turned 180 deg: G, D, S right to left
+WV, WO = 27.45, 14.55                      # centre lines of the VIN wire (top, below the pins) and the VOUT wire (top, above them)
+GND_C = [[21.0, 5.5], [7.5, 5.5], [7.5, 38.5], [21.0, 38.5]]   # the C-shaped GND wire underneath, from J2- round to J1-
 LEGS = {
- "main": [("~VIN", 0, "J1.2", [12.8, WV], "main"), ("=", 0, [[12.8, WV], [DRAIN_X[-1], WV]], "main")]
+ "main": [("~VIN", 0, "J1.2", [28.0, WV], "main"), ("=", 0, [[28.0, WV], [DRAIN_X[-1], WV]], "main")]
          + [x for q, xd, xs in zip(FETS, DRAIN_X, SRC_X) for x in (("~VIN", 0, [xd, WV], f"{q}.2", "main"), ("@", f"{q}.2", f"{q}.3", "main"),
                                                                     ("~VOUT", 0, f"{q}.3", [xs, WO], "main"))]
-         + [("=", 0, [[SRC_X[0], WO], [108.2, WO]], "main"), ("~VOUT", 0, [108.2, WO], "J2.2", "main"),
-            ("~GND", 1, "J2.1", [WG, 23.4], "ret"), ("=", 1, [[WG, 23.4], [WG, WV], [31.6, WV]], "ret"), ("~GND", 1, [31.6, WV], "J1.1", "ret")],
- "pre": [("~VIN", 0, "J1.2", "Q5.3", "sig"), ("@", "Q5.3", "Q5.2", "sig"), ("PCD", "Q5.2", "F1.1", "sig"), ("@", "F1.1", "F1.2", "sig"),
-         ("PCF", "F1.2", "R3.1", "sig"), ("PCF", "F1.2", "R4.1", "sig"), ("@", "R3.1", "R3.2", "sig"), ("@", "R4.1", "R4.2", "sig"),
-         ("VOUT", "R4.2", "R3.2", "sig"), ("VOUT", "R3.2", "RK2.1", "sig"), ("~VOUT", 0, "RK2.1", "J2.2", "sig"),
-         ("@", "R1.1", "R1.2", "ctl"), ("PCG", "R1.2", "Q5.1", "ctl"), ("PCG", "Q5.1", "R2.1", "ctl"), ("@", "R2.1", "R2.2", "ctl"),
-         ("PCDN", "R2.2", "Q6.3", "ctl"), ("@", "Q6.3", "Q6.1", "ctl"), ("@", "D3.1", "D3.2", "ctl"), ("PCG", "D3.2", "Q5.1", "ctl")],
+         + [("=", 0, [[SRC_X[-1], WO], [28.0, WO]], "main"), ("~VOUT", 0, [28.0, WO], "J2.2", "main"),
+            ("~GND", 1, "J2.1", GND_C[0], "ret"), ("=", 1, GND_C, "ret"), ("~GND", 1, GND_C[-1], "J1.1", "ret")],
+ "pre": [("~VIN", 0, "J1.2", "RK1.1", "sig"), ("@", "RK1.1", "RK1.2", "sig"), ("VIN_K", "RK1.2", "Q11.3", "sig"), ("@", "Q11.3", "Q11.2", "sig"),
+         ("PCD", "Q11.2", "F1.1", "sig"), ("@", "F1.1", "F1.2", "sig"), ("PCF", "F1.2", "R3.1", "sig"), ("PCF", "F1.2", "R4.1", "sig"),
+         ("@", "R3.1", "R3.2", "sig"), ("@", "R4.1", "R4.2", "sig"), ("SRC", "R4.2", "R3.2", "sig"), ("SRC", "R3.2", "RK2.2", "sig"),
+         ("@", "RK2.2", "RK2.1", "sig"), ("~VOUT", 0, "RK2.1", "J2.2", "sig"),
+         ("@", "R1.1", "R1.2", "ctl"), ("PCG", "R1.2", "Q11.1", "ctl"), ("PCG", "Q11.1", "R2.1", "ctl"), ("@", "R2.1", "R2.2", "ctl"),
+         ("PCDN", "R2.2", "Q12.3", "ctl"), ("@", "Q12.3", "Q12.1", "ctl"), ("@", "D3.1", "D3.2", "ctl"), ("PCG", "D3.2", "Q11.1", "ctl")],
  "gate": [("V5", "C4.1", "U3.2", "ctl"), ("@", "U3.2", "U3.4", "sig"), ("V12F", "U3.4", "U4.4", "sig"), ("@", "U4.4", "U4.3", "sig"),
           ("DRV", "U4.3", "D10.2", "sig"), ("@", "D10.2", "D10.1", "sig"), ("DRVD", "D10.1", "R35.1", "sig"), ("@", "R35.1", "R35.2", "sig")]
-         + [("FG", "R35.2", f"RG{i}.2", "sig") for i in range(1, 5)]
-         + [x for i in range(1, 5) for x in (("@", f"RG{i}.2", f"RG{i}.1", "sig"), (f"G{i}", f"RG{i}.1", f"Q{i}.1", "sig"))]
-         + [("~VOUT", 0, "Q2.3", "RK2.1", "ret"), ("@", "RK2.1", "RK2.2", "ret"), ("SRC", "RK2.2", "U3.3", "ret"),
+         + [("FG", "R35.2", f"RG{i}.2", "sig") for i in range(1, NF + 1)]
+         + [x for i in range(1, NF + 1) for x in (("@", f"RG{i}.2", f"RG{i}.1", "sig"), (f"G{i}", f"RG{i}.1", f"Q{i}.1", "sig"))]
+         + [("~VOUT", 0, "Q1.3", "RK2.1", "ret"), ("@", "RK2.1", "RK2.2", "ret"), ("SRC", "RK2.2", "U3.3", "ret"),
             ("FG", "R35.2", "R39.2", "ctl"), ("@", "R39.2", "R39.1", "ctl"), ("FGC", "R39.1", "C6.1", "ctl"),
             ("FG", "R35.2", "D11.1", "ctl"), ("@", "D11.1", "D11.2", "ctl"),
             ("V12F", "U3.4", "D5.1", "ctl"), ("V12F", "U3.4", "R33.1", "ctl"), ("V12F", "U3.4", "C5.1", "ctl")],
- "arm": [("V5", "C2.1", "R9.1", "ctl"), ("@", "R9.1", "R9.2", "sig"), ("RIN", "R9.2", "J4.1", "sig"), ("ROUT", "J4.2", "Q7.1", "sig"),
-         ("@", "Q7.1", "Q7.3", "sig"), ("ARM", "Q7.3", "R15.1", "sig"), ("@", "R15.1", "R15.2", "sig"), ("EN", "R15.2", "C7.1", "sig"),
-         ("@", "Q7.1", "Q7.2", "ctl"), ("QAB", "Q7.2", "R10.1", "ctl"), ("@", "R10.1", "R10.2", "ctl"), ("HALL", "R10.2", "J3.1", "ctl"),
+ "arm": [("V5", "C2.1", "R9.1", "ctl"), ("@", "R9.1", "R9.2", "sig"), ("RIN", "R9.2", "J4.1", "sig"), ("ROUT", "J4.2", "Q13.1", "sig"),
+         ("@", "Q13.1", "Q13.3", "sig"), ("ARM", "Q13.3", "R15.1", "sig"), ("@", "R15.1", "R15.2", "sig"), ("EN", "R15.2", "C7.1", "sig"),
+         ("@", "Q13.1", "Q13.2", "ctl"), ("QAB", "Q13.2", "R10.1", "ctl"), ("@", "R10.1", "R10.2", "ctl"), ("HALL", "R10.2", "J3.1", "ctl"),
          ("V5", "C2.1", "R8.1", "ctl"), ("@", "R8.1", "R8.2", "ctl"), ("V5S", "R8.2", "J3.2", "ctl"),
          ("V5S", "R8.2", "R13.1", "ctl"), ("@", "R13.1", "R13.2", "ctl"), ("HLA", "R13.2", "D7.2", "ctl"), ("@", "D7.2", "D7.1", "ctl"),
          ("ROUT", "J4.2", "R14.1", "ctl"), ("@", "R14.1", "R14.2", "ctl"), ("RLA", "R14.2", "D8.2", "ctl"),
-         ("ARM", "Q7.3", "R16.1", "ctl"), ("@", "R16.1", "R16.2", "ctl"), ("QIB", "R16.2", "Q8.2", "ctl"),
+         ("ARM", "Q13.3", "R16.1", "ctl"), ("@", "R16.1", "R16.2", "ctl"), ("QIB", "R16.2", "Q14.2", "ctl"),
          ("EN", "R15.2", "U2.5", "ctl"), ("EN", "R15.2", "U2.11", "ctl")],
- "seq": [("@", "R32.1", "R32.2", "sig"), ("UGA", "R32.2", "U4.1", "sig"), ("@", "U4.1", "U4.2", "sig"), ("CATH", "U4.2", "Q11.3", "sig"),
-         ("@", "R31.1", "R31.2", "sig"), ("LVA", "R31.2", "D9.2", "sig"), ("@", "D9.2", "D9.1", "sig"), ("CATH", "D9.1", "Q11.3", "sig"),
-         ("@", "Q11.3", "Q11.1", "sig"), ("QGM", "Q11.1", "Q10.3", "sig"), ("@", "Q10.3", "Q10.1", "sig"),
-         ("REF", "R6.2", "U2.4", "ctl"), ("REF", "R6.2", "U2.10", "ctl"), ("@", "U2.5", "U2.2", "ctl"), ("PCEN", "U2.2", "Q10.2", "ctl"),
-         ("PCEN", "U2.2", "Q6.2", "ctl"), ("PCEN", "U2.2", "R29.2", "ctl"), ("PCEN", "U2.2", "U2.1", "ctl"),
+ "seq": [("@", "R32.1", "R32.2", "sig"), ("UGA", "R32.2", "U4.1", "sig"), ("@", "U4.1", "U4.2", "sig"), ("CATH", "U4.2", "Q17.3", "sig"),
+         ("@", "R31.1", "R31.2", "sig"), ("LVA", "R31.2", "D9.2", "sig"), ("@", "D9.2", "D9.1", "sig"), ("CATH", "D9.1", "Q17.3", "sig"),
+         ("@", "Q17.3", "Q17.1", "sig"), ("QGM", "Q17.1", "Q16.3", "sig"), ("@", "Q16.3", "Q16.1", "sig"),
+         ("REF", "R6.2", "U2.4", "ctl"), ("REF", "R6.2", "U2.10", "ctl"), ("@", "U2.5", "U2.2", "ctl"), ("PCEN", "U2.2", "Q16.2", "ctl"),
+         ("PCEN", "U2.2", "Q12.2", "ctl"), ("PCEN", "U2.2", "R29.2", "ctl"), ("PCEN", "U2.2", "U2.1", "ctl"),
          ("@", "R21.1", "R21.2", "ctl"), ("VOD", "R21.2", "U2.7", "ctl"), ("VOD", "R21.2", "U2.9", "ctl"),
          ("@", "R26.1", "R26.2", "ctl"), ("RAMP", "R26.2", "U2.6", "ctl"), ("@", "R24.1", "R24.2", "ctl"), ("VIND", "R24.2", "U2.8", "ctl"),
-         ("@", "U2.9", "U2.14", "ctl"), ("DONE", "U2.14", "Q11.2", "ctl"), ("DONE", "U2.14", "R30.2", "ctl"),
+         ("@", "U2.9", "U2.14", "ctl"), ("DONE", "U2.14", "Q17.2", "ctl"), ("DONE", "U2.14", "R30.2", "ctl"),
          ("RRST", "U2.13", "R28.2", "ctl"), ("@", "R28.2", "R28.1", "ctl")],
- "kill": [("EN", "C7.1", "R20.2", "sig"), ("@", "R20.2", "R20.1", "sig"), ("QDC", "R20.1", "Q9.3", "sig"), ("@", "Q9.3", "Q9.1", "sig"),
-          ("@", "R17.1", "R17.2", "ctl"), ("NARM", "R17.2", "R18.1", "ctl"), ("@", "R18.1", "R18.2", "ctl"), ("QDB", "R18.2", "Q9.2", "ctl"),
+ "kill": [("EN", "C7.1", "R20.2", "sig"), ("@", "R20.2", "R20.1", "sig"), ("QDC", "R20.1", "Q15.3", "sig"), ("@", "Q15.3", "Q15.1", "sig"),
+          ("@", "R17.1", "R17.2", "ctl"), ("NARM", "R17.2", "R18.1", "ctl"), ("@", "R18.1", "R18.2", "ctl"), ("QDB", "R18.2", "Q15.2", "ctl"),
           ("EN", "C7.1", "U2.5", "ctl")]
-         + [x for i in range(1, 5) for x in ((f"G{i}", f"Q{i}.1", f"RG{i}.1", "sig"), ("@", f"RG{i}.1", f"RG{i}.2", "sig"), ("FG", f"RG{i}.2", "Q12.3", "sig"))]
-         + [("FGC", "C6.1", "R39.1", "sig"), ("@", "R39.1", "R39.2", "sig"), ("FG", "R39.2", "Q12.3", "sig"), ("@", "Q12.3", "Q12.1", "sig"), ("QOC", "Q12.1", "R36.1", "sig"), ("@", "R36.1", "R36.2", "sig"),
-            ("SRC", "R36.2", "RK2.2", "sig"), ("@", "RK2.2", "RK2.1", "sig"),
+         + [x for i in range(1, NF + 1) for x in ((f"G{i}", f"Q{i}.1", f"RG{i}.1", "sig"), ("@", f"RG{i}.1", f"RG{i}.2", "sig"), ("FG", f"RG{i}.2", "Q18.3", "sig"))]
+         + [("FGC", "C6.1", "R39.1", "sig"), ("@", "R39.1", "R39.2", "sig"), ("FG", "R39.2", "Q18.3", "sig"), ("@", "Q18.3", "Q18.1", "sig"),
+            ("QOC", "Q18.1", "R36.1", "sig"), ("@", "R36.1", "R36.2", "sig"), ("SRC", "R36.2", "RK2.2", "sig"), ("@", "RK2.2", "RK2.1", "sig"),
             ("@", "R34.1", "R34.2", "ctl"), ("DRV", "U4.3", "R38.2", "ctl"), ("@", "R38.2", "R38.1", "ctl"), ("QOD", "R38.1", "D6.1", "ctl"),
-            ("@", "D6.1", "D6.2", "ctl"), ("QOB", "D6.2", "Q12.2", "ctl")],
+            ("@", "D6.1", "D6.2", "ctl"), ("QOB", "D6.2", "Q18.2", "ctl")],
  "v5": [("~VIN", 0, "J1.2", "RK1.1", "sig"), ("@", "RK1.1", "RK1.2", "sig"), ("VIN_K", "RK1.2", "D4.2", "sig"), ("@", "D4.2", "D4.1", "sig"),
         ("VR1", "D4.1", "R5.1", "sig"), ("@", "R5.1", "R5.2", "sig"), ("VR2", "R5.2", "U1.1", "sig"), ("VR2", "R5.2", "C1.1", "ctl"),
         ("@", "U1.1", "U1.3", "sig"), ("V5", "U1.3", "C2.1", "sig"), ("V5", "U1.3", "U3.2", "sig"), ("V5", "U1.3", "U2.3", "sig"),
@@ -380,8 +387,8 @@ def wires(b):
         if d.GetLayer() not in (pcbnew.F_Mask, pcbnew.B_Mask): continue
         bb = d.GetBoundingBox(); x0, y0, x1, y1 = mm(bb.GetLeft()) - OX, mm(bb.GetTop()) - OY, mm(bb.GetRight()) - OX, mm(bb.GetBottom()) - OY
         L = 0 if d.GetLayer() == pcbnew.F_Mask else 1
-        if x1 - x0 >= y1 - y0: out.append([L, round(x0 + 0.3, 2), round((y0 + y1) / 2, 2), round(x1 - 0.3, 2), round((y0 + y1) / 2, 2)])
-        else: out.append([L, round((x0 + x1) / 2, 2), round(y0 - 0.5, 2), round((x0 + x1) / 2, 2), round(y1 - 0.3, 2)])
+        if x1 - x0 >= y1 - y0: out.append([L, round(x0 + 0.4, 2), round((y0 + y1) / 2, 2), round(x1 - 0.4, 2), round((y0 + y1) / 2, 2)])
+        else: out.append([L, round((x0 + x1) / 2, 2), round(y0 + 0.4, 2), round((x0 + x1) / 2, 2), round(y1 - 0.4, 2)])
     return out
 
 def write(b):
@@ -391,6 +398,7 @@ def write(b):
           f"const PARTS = {json.dumps(data['PARTS'], separators=(',', ':'))};\n"
           f"const PATHS = {json.dumps(data['PATHS'], separators=(',', ':'))};\n"
           f"const WIRES = {json.dumps(wires(b), separators=(',', ':'))};\n"
+          f"const FETSHARE = {json.dumps(dict(zip(FETS, json.load(open(SHARE))['fet_share'])), separators=(',', ':'))};\n"
           "/* ---------- end generated ---------- */")
     t = open(HTML).read()
     t, n = re.subn(r"/\* ---------- generated by make_3d_data\.py.*?/\* ---------- end generated ---------- \*/", lambda m: js, t, count=1, flags=re.S)
