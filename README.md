@@ -138,7 +138,7 @@ Full lists with quantities: [`kicad/bom_tht_grouped.csv`](kicad/bom_tht_grouped.
 | `gerber_tht/`, `gerber_smd/`, `kill_switch_*_gerber_jlcpcb.zip`, `kill_switch_*_kicad.zip` | Gerbers for JLCPCB and the KiCad projects (with 3D models) |
 | `veroboard/` | Perfboard version of the through-hole board, with schematic, wire list and parts |
 | `pcb-3d/` | 3D through-hole board with every part and the current paths on the real copper |
-| `3d/` | Tutorial: video `kill_switch_tutorial.mp4` and an interactive 3D scene of a diver pulling and re-arming the plug |
+| `3d/` | Tutorial: video `kill_switch_tutorial.mp4` (86 s, English voice-over, 100 A board) and an interactive 3D scene of a diver pulling and re-arming the plug; `make_voice.py` + `narration/` make the voice, `render_video.js` renders and mixes it |
 | `mech/` | Dock, plug, T-handle and inside sensor bracket (OpenSCAD, STL) |
 | `kicad/build_ks.py`, `route_ks.py`, `ks_power.*`, `gerber/`, `kill_switch_gerber_jlcpcb.zip`, `kill_switch_kicad.zip` | First SMD version (LM5060, M5 lugs, 118 × 120 mm), kept for reference |
 | `calc/` | `design_calc.py`: magnet field, reed placement, cable stray field, timing, plug retention (`report.md`) |

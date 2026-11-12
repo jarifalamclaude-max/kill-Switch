@@ -15,9 +15,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 PCB = os.path.join(HERE, "..", "kicad", "ks_tht.kicad_pcb")
 PAGE = os.path.join(HERE, "index.html")
 OX = OY = 100.0                  # KiCad page offset used by build_tht.py
-W, H = 120.0, 98.0
+W, H = 123.0, 100.0
 S = 10                           # px per mm
-TEXTS_KEPT = ("MAGNETIC KILL SWITCH", "4S-6S LiPo", "BATTERY", "ESCs", "4 x IRFB3206", "GATE DRIVE")
+TEXTS_KEPT = ("MAGNETIC KILL SWITCH", "4S-6S LiPo", "VIN + VOUT", "tabs are all VIN")
 MASK, MASK_CU, PAD, FR4, SILK, HOLE = (22, 92, 54), (40, 122, 72), (196, 198, 190), (190, 172, 120), (238, 240, 232), (16, 18, 16)
 
 mm = pcbnew.ToMM

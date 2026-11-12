@@ -1,0 +1,15 @@
+[
+ {"id": "01", "at": "0.9", "text": "This is the magnetic kill switch of our underwater robot. Right now the robot is live: the red LED is on, and the thrusters are spinning."},
+ {"id": "02", "at": "6.3", "text": "Outside the hull sits a red plug with an N52 magnet, south pole facing the hull."},
+ {"id": "03", "at": "9.7", "text": "An O-ring snaps it into the dock. It takes ten to twenty newtons to pull out, so it never falls out by itself."},
+ {"id": "04", "at": "13.2", "text": "Inside, behind six millimetres of acrylic, a Hall sensor and a reed switch both watch the magnet. There is no hole through the hull."},
+ {"id": "05", "at": "20.2", "text": "The board takes the battery on one XT90, and feeds the ESCs from another. Eight IRFB3206 MOSFETs switch up to one hundred amps, with eight gauge copper wire soldered on the bare strips."},
+ {"id": "06", "at": "24.8", "text": "To kill the robot, the diver pulls the red handle."},
+ {"id": "07", "at": "T_KILL-0.2", "text": "The moment the magnet leaves, the power is cut in one and a half milliseconds, and the thrusters stop."},
+ {"id": "08", "at": "33.4", "text": "Park the plug at least twelve centimetres away, and never on steel."},
+ {"id": "09", "at": "36.6", "text": "All three LEDs are off. The robot is safe to handle."},
+ {"id": "10", "at": "40.2", "text": "To arm it again, bring the plug back and push it in."},
+ {"id": "11", "at": "T_ARM0+0.1", "text": "Both blue LEDs light up. The board first pre-charges the ESC capacitors, and about point eight seconds later, the MOSFETs turn on. The robot is live."},
+ {"id": "12", "at": "51.7", "text": "Short gaps from vibration, under one millisecond, are ignored."},
+ {"id": "13", "at": "56.2", "text": "This board has not been built yet. Test it first on a bench supply with a current limit, then with one ESC, and only then at full power."}
+]
