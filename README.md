@@ -59,7 +59,7 @@ Not included (to keep it simple): under- and over-voltage lockout, a second inde
 | Short on the ESC side while live | off in 0.43 / 0.44 ms (4S / 6S); 1.0 J / 2.3 J shared by the 8 MOSFETs; gate peak 15.7 / 16.0 V; battery side peak 26.6 / 36.3 V |
 | Magnet in with the ESC side shorted | never turns on; 0.29 J in the pre-charge resistors |
 | Battery spike when killing 100 A | 19.5 V peak on 4S, 27.9 V on 6S |
-| SMD board (4 × IPT007N06N) | 18 mV at 100 A, gate 13.3 V, kill 1.6 ms, short off in 0.45 / 0.48 ms |
+| SMD board (4 × IPT007N06N) | 18 mV at 100 A, gate 13.3 V, kill 1.6 ms, short off in 0.45 / 0.48 ms; with the 8 AWG wires: copper 1.8 W, MOSFETs 22–29 A each (without: 8.3 W, Q1 47 A) |
 
 All 15 scenarios for each board, the weakest optocoupler, and the copper current solve: [`SIMULATION_RESULT.md`](SIMULATION_RESULT.md). Magnet field, sensor placement and plug retention: [`calc/report.md`](calc/report.md).
 
@@ -71,7 +71,7 @@ PCB copper alone cannot carry 100 A: the 2 oz copper would lose 9 W, and the MOS
 - **VIN** (top, below the MOSFETs, under their tabs): from the J1 + pin along the whole strip.
 - **GND** (bottom): bend the wire into a C on the bare strip, from the J2 − pin to the J1 − pin.
 
-With the wires the copper loses 2.5 W at 100 A and the 8 MOSFETs share the current within 11–15 A each. The MOSFET tabs are all VIN. A flat copper or aluminium bar bolted across all 8 tabs (M3, no insulators needed) is optional; it spreads the heat so that Q1 runs as cool as the others.
+With the wires the copper loses 2.5 W at 100 A and the 8 MOSFETs share the current within 11–15 A each. The SMD board needs the same wires (VIN above the MOSFETs, VOUT below them and down to J2 +, GND underneath between the XT90 minus pins): with them its 4 MOSFETs carry 22–29 A each, without them Q1 takes 47 A. The through-hole MOSFET tabs are all VIN. A flat copper or aluminium bar bolted across all 8 tabs (M3, no insulators needed) is optional; it spreads the heat so that Q1 runs as cool as the others.
 
 ## XT90
 

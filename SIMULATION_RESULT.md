@@ -96,6 +96,22 @@ Weakest optocoupler (PC817 / EL357N CTR 50 % instead of 100 %):
 
 The gate drive has enough margin for a weak opto.
 
+Board copper, DC current solve: pours, tracks and pads of VIN, VOUT and GND on a 0.25 mm grid, 2 oz copper at 20 C; each MOSFET is its 25 C maximum Rds(on) + legs between its drain and source pads (`kicad/simulation/copper_tht.py --board smd`). The wires are 8 AWG (8.4 mm2) on every bare strip.
+
+| | As etched | With 8 AWG bare wire on the bare strips |
+|---|---|---|
+| Copper, battery XT90 + to the MOSFET drains | 0.100 mOhm | 0.054 mOhm |
+| Copper, MOSFET sources to the ESC XT90 + | 0.665 mOhm | 0.107 mOhm |
+| Copper, GND return (ESC XT90 - to battery XT90 -) | 0.064 mOhm | 0.014 mOhm |
+| 4 MOSFETs in parallel (0.80 mOhm each, 25 C max) | 0.266 mOhm | 0.202 mOhm |
+| Current share Q1 ... Q4 (%) | 47.5 / 27.0 / 15.2 / 10.3 | 29.3 / 25.3 / 23.1 / 22.3 |
+| Busiest MOSFET at 100 A | 47.5 A | 29.3 A |
+| Loss at 60 A: copper / MOSFETs | 3.0 W / 1.0 W | 0.6 W / 0.7 W |
+| Loss at 100 A: copper / MOSFETs | 8.3 W / 2.7 W | 1.8 W / 2.0 W |
+| Drop in the copper at 100 A | 83 mV | 18 mV |
+
+Heat with the wires at 100 A continuous, MOSFETs hot (Rds(on) x1.5 at about 100 C): busiest MOSFET 29.3 A, about 1.01 W; average 0.73 W each. Current-density maps: `kicad/simulation/copper_smd_vin.png`, `_vout`, `_gnd` (and `*_wires.png`).
+
 ## 3. What to do with this
 
 - Solder 8 AWG bare copper wire on every bare strip before running more than about 30 A: VIN and VOUT on top, and the C-shaped GND link underneath from the ESC XT90 minus to the battery XT90 minus.

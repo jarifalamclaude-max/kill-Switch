@@ -312,6 +312,8 @@ def grouped_bom(src=os.path.join(HERE, "bom_smd.csv"), dst=os.path.join(HERE, "b
         w.writerow([1, "8 AWG bare copper", "-", "-", "8 AWG (8 mm2) bare solid copper wire, about 15 cm: VIN strip 45 mm, VOUT strip 45 mm + 22 mm, "
                     "GND link 12 mm under the board between the XT90 minus pins - tin the strips and solder the wire along them"])
         w.writerow([3, "M3 nylon", "-", "H1 H2 H3", "M3 nylon screw + nylon standoff (H3 sits next to the VIN copper)"])
+        w.writerow([1, "battery fuse 125-150 A", "-", "-", "ANL / MIDI / MEGA fuse in the battery + lead, close to the battery (protects the wiring; the board switches off a dead short in under 1 ms)"])
+        w.writerow([2, "8 AWG silicone cable", "-", "-", "battery lead and ESC harness to the XT90 plugs, as short as possible"])
     print("grouped BOM:", dst, len(groups), "lines")
 
 def small_refs(B, size=0.8):

@@ -46,12 +46,14 @@ def raster(b, net, layer):
         else:
             a, c = mm_xy(t.GetStart()), mm_xy(t.GetEnd()); d.line([a, c], fill=255, width=w)
             for p in (a, c): d.ellipse([p[0] - w / 2, p[1] - w / 2, p[0] + w / 2, p[1] + w / 2], fill=255)
-    for p in pads_of(b, net):
+    for p in pads_of(b, net, layer):
         x0, y0, x1, y1 = pad_box(p); d.rectangle([x0, y0, x1, y1], fill=255)
     return np.array(img) > 127
 
-def pads_of(b, net):
-    return [p for fp in b.GetFootprints() for p in fp.Pads() if p.GetNetname() == net and p.GetDrillSize().x > 0]
+def pads_of(b, net, layer=None):
+    """Plated-hole pads of the net; with a layer, also the SMD pads on that layer (copper the current can use)."""
+    return [p for fp in b.GetFootprints() for p in fp.Pads() if p.GetNetname() == net
+            and (p.GetDrillSize().x > 0 or (layer is not None and p.IsOnLayer(layer)))]
 
 def pad_box(p):
     bb = p.GetBoundingBox()
@@ -154,9 +156,13 @@ def main():
         gr.gz = links * gr.m[0] * gr.m[1] * G_CELL * 50.0
     j1p = pad_cells(pad("J1", "2"), (2, NY, NX)); j2p = pad_cells(pad("J2", "2"), (2, NY, NX))
     def cells(f, num):
+        """Cells of the pads numbered num, only on the layers the pad is on (an SMD pad is on F.Cu only)."""
         m = np.zeros((2, NY, NX), dtype=bool)
         for p in f.Pads():
-            if p.GetNumber() == num: m |= pad_cells(p, (2, NY, NX))
+            if p.GetNumber() != num: continue
+            pc = pad_cells(p, (NY, NX))
+            for li, layer in enumerate((F, B)):
+                if p.GetDrillSize().x > 0 or p.IsOnLayer(layer): m[li] |= pc
         return m
     drains = [cells(f, dpad) for f in qs]
     sources = [cells(f, spad) for f in qs]

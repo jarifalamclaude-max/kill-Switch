@@ -1,0 +1,58 @@
+{
+ "board": "smd",
+ "grid_mm": 0.25,
+ "copper": "2 oz (70 um), 20 C",
+ "n_fets": 4,
+ "fet": "IPT007N06N",
+ "r_fet_mohm": 0.8,
+ "wires_8awg_on_strips": true,
+ "fet_share": [
+  0.2932,
+  0.2529,
+  0.2314,
+  0.2226
+ ],
+ "r_total_mohm": 0.3635363710070963,
+ "r_vin_copper_mohm": 0.05403228355109691,
+ "r_vout_copper_mohm": 0.10712474500246322,
+ "r_fets_parallel_mohm": 0.20237934245353617,
+ "r_gnd_copper_mohm": 0.014033933871012287,
+ "vin_peak_A_per_mm_per_A": 0.18737243922888086,
+ "vin_peak_at_mm": [
+  28.5,
+  4.0,
+  "F.Cu"
+ ],
+ "vout_peak_A_per_mm_per_A": 0.49898573484698977,
+ "vout_peak_at_mm": [
+  32.75,
+  24.5,
+  "F.Cu"
+ ],
+ "gnd_peak_A_per_mm_per_A": 0.14241569159928355,
+ "gnd_peak_at_mm": [
+  27.0,
+  23.5,
+  "B.Cu"
+ ],
+ "copper_drop_60A_mV": 10.511457745474345,
+ "copper_loss_60A_W": 0.6306874647284607,
+ "fet_loss_60A_W": 0.7285656328327302,
+ "fet_max_current_60A_A": 17.592086764507865,
+ "vin_loss_60A_W": 0.19451622078394887,
+ "vin_peak_60A_A_per_mm": 11.242346353732852,
+ "vout_loss_60A_W": 0.38564908200886755,
+ "vout_peak_60A_A_per_mm": 29.939144090819386,
+ "gnd_loss_60A_W": 0.05052216193564424,
+ "gnd_peak_60A_A_per_mm": 8.544941495957014,
+ "copper_drop_100A_mV": 17.51909624245724,
+ "copper_loss_100A_W": 1.7519096242457244,
+ "fet_loss_100A_W": 2.023793424535362,
+ "fet_max_current_100A_A": 29.32014460751311,
+ "vin_loss_100A_W": 0.5403228355109692,
+ "vin_peak_100A_A_per_mm": 18.737243922888087,
+ "vout_loss_100A_W": 1.071247450024632,
+ "vout_peak_100A_A_per_mm": 49.89857348469898,
+ "gnd_loss_100A_W": 0.14033933871012286,
+ "gnd_peak_100A_A_per_mm": 14.241569159928355
+}

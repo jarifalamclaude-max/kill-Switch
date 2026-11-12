@@ -53,3 +53,5 @@ qty,value,footprint,refs,buy
 1,EL357N,SOP-4_4.4x2.6mm_P1.27mm,U4,"Everlight EL357N(C)(TA)-G optocoupler (SOP-4, CTR 50-600 %; pins 1 A, 2 K, 3 E, 4 C)"
 1,8 AWG bare copper,-,-,"8 AWG (8 mm2) bare solid copper wire, about 15 cm: VIN strip 45 mm, VOUT strip 45 mm + 22 mm, GND link 12 mm under the board between the XT90 minus pins - tin the strips and solder the wire along them"
 3,M3 nylon,-,H1 H2 H3,M3 nylon screw + nylon standoff (H3 sits next to the VIN copper)
+1,battery fuse 125-150 A,-,-,"ANL / MIDI / MEGA fuse in the battery + lead, close to the battery (protects the wiring; the board switches off a dead short in under 1 ms)"
+2,8 AWG silicone cable,-,-,"battery lead and ESC harness to the XT90 plugs, as short as possible"
