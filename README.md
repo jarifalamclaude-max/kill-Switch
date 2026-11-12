@@ -15,7 +15,7 @@ There are two versions in this repository:
 
 **Neither board has been built or tested yet.** Everything below comes from calculations, KiCad DRC (0 violations, 0 unconnected on both boards) and ngspice simulations of the netlists taken from the PCBs.
 
-![Through-hole board, top](docs/board_tht_top.png)
+![Through-hole board, both layers](docs/board_tht_layers.png)
 
 ## Why no reed switch in the power path
 

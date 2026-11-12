@@ -240,7 +240,7 @@ def pack(b, pos):
 def tht_board():
     B = Board(os.path.join(HERE, "ks_tht.kicad_pcb"))
     b = B.b
-    B.rules(clearance=0.3, track=0.35)
+    B.rules(clearance=0.4, track=0.35)
     ds = b.GetDesignSettings()
     ds.SetCopperLayerCount(2)
     for x0, y0, x1, y1 in ((0, 0, W, 0), (W, 0, W, H), (W, H, 0, H), (0, H, 0, 0)):

@@ -23,8 +23,23 @@ B_CU, F_CU = pcbnew.B_Cu, pcbnew.F_Cu
 NAME = "Md. Jarif Alam 13"
 VIN_POLY = [(0.0, 0.0), (110.0, 0.0), (110.0, 13.97), (15.0, 13.97), (15.0, 16.5), (0.0, 16.5)]
 VOUT_POLY = [(23.0, 13.97), (118.0, 13.97), (118.0, 30.0), (23.0, 30.0)]
+CLR = 0.45                                         # track to other copper: room for hand soldering, nothing between pins
 WIDE = {"PCD": 0.9, "PCF": 0.9}
 MID = {"VIN_K": 0.6, "SRC": 0.6, "V5": 0.6, "V12F": 0.5, "FG": 0.6, "VR1": 0.6, "VR2": 0.6, "DRV": 0.4}
+
+BODIES = []
+def bodies(b):
+    """Courtyard boxes of the small parts: tracks stay out of them unless there is no other way."""
+    out = []
+    for fp in b.GetFootprints():
+        ref = fp.GetReference()
+        if ref.startswith(("H", "TP", "J1", "J2")) or ref in ("Q1", "Q2", "Q3", "Q4", "Q5"): continue
+        xs, ys = [], []
+        for g in fp.GraphicalItems():
+            if g.GetLayer() == pcbnew.F_CrtYd:
+                bb = g.GetBoundingBox(); xs += [bb.GetLeft(), bb.GetRight()]; ys += [bb.GetTop(), bb.GetBottom()]
+        if xs: out.append((pcbnew.ToMM(min(xs)) - OX, pcbnew.ToMM(min(ys)) - OY, pcbnew.ToMM(max(xs)) - OX, pcbnew.ToMM(max(ys)) - OY))
+    return out
 
 def route_nets(b, nets, width, keep, label, tries=6):
     """Route the given net codes with one track width; retry failed nets first."""
@@ -37,8 +52,9 @@ def route_nets(b, nets, width, keep, label, tries=6):
     order = sorted([c for c in pads if len(pads[c]) > 1 or c in nets], key=hpwl)
     failed = []
     for attempt in range(tries):
-        r = GridRouter(b, OX, OY, W, H, clearance=0.3, track_w=width, keepouts=keep)
+        r = GridRouter(b, OX, OY, W, H, clearance=CLR, track_w=width, keepouts=keep, bcu_cost=2.2)
         r.octilinear = True
+        for (x0, y0, x1, y1) in BODIES: r.soft_box(x0, y0, x1, y1, 0, 6.0); r.soft_box(x0, y0, x1, y1, 1, 2.0)
         failed = [c for c in order if not r.route_net(c)[0]]
         print(f"  {label} attempt {attempt}: failed {[name(c) for c in failed]}")
         if not failed: return []
@@ -48,9 +64,54 @@ def route_nets(b, nets, width, keep, label, tries=6):
         order = failed + [c for c in order if c not in failed]
     return [name(c) for c in failed]
 
+def isolated_gnd_pads(b, path):
+    """Fill, save, run DRC in a fresh process and return the GND pads it reports as unconnected."""
+    import re, subprocess
+    pcbnew.ZONE_FILLER(b).Fill(b.Zones()); pcbnew.SaveBoard(path, b)
+    rpt = path + ".tmp.rpt"
+    subprocess.run([sys.executable, "-c", "import pcbnew,sys; b=pcbnew.LoadBoard(sys.argv[1]); "
+                    "pcbnew.WriteDRCReport(b, sys.argv[2], pcbnew.EDA_UNITS_MILLIMETRES, True)", path, rpt], check=True, capture_output=True)
+    found = set(re.findall(r"PTH pad (\S+) \[GND\] of (\S+)", open(rpt).read().split("unconnected pads")[1]))
+    os.remove(rpt)
+    return [(ref, num) for num, ref in found]
+
+def main_island(b, r, code):
+    """Grid cells inside the largest filled piece of the GND pour, per layer."""
+    mask = np.zeros((2, r.ny, r.nx), dtype=bool)
+    for z in b.Zones():
+        if z.GetNetCode() != code or z.GetIsRuleArea(): continue
+        for li, layer in ((0, F_CU), (1, B_CU)):
+            if not z.IsOnLayer(layer): continue
+            polys = z.GetFilledPolysList(layer)
+            areas = [abs(polys.Outline(i).Area()) for i in range(polys.OutlineCount())]
+            if not areas: continue
+            k = int(np.argmax(areas)); one = pcbnew.SHAPE_POLY_SET(); one.AddOutline(polys.Outline(k))
+            for h in range(polys.HoleCount(k)): one.AddHole(polys.Hole(k, h))
+            for iy in range(1, r.ny - 1, 2):
+                for ix in range(1, r.nx - 1, 2):
+                    if one.Contains(P(ix * r.g, iy * r.g)): mask[li, iy - 1:iy + 2, ix - 1:ix + 2] = True
+    return mask
+
+def join_gnd_pads(b, keep, pads):
+    """Route each isolated GND pad to the main piece of the GND pour with a short track."""
+    r = GridRouter(b, OX, OY, W, H, clearance=CLR, track_w=0.5, keepouts=keep, bcu_cost=1.5)
+    r.octilinear = True
+    code = b.FindNet("GND").GetNetCode(); n = 0
+    dst = main_island(b, r, code)
+    for ref, num in pads:
+        p = [q for q in b.FindFootprintByReference(ref).Pads() if q.GetNumber() == num][0]
+        bb = p.GetBoundingBox(); src = np.zeros_like(dst)
+        x0, y0 = pcbnew.ToMM(bb.GetLeft()) - OX, pcbnew.ToMM(bb.GetTop()) - OY
+        x1, y1 = pcbnew.ToMM(bb.GetRight()) - OX, pcbnew.ToMM(bb.GetBottom()) - OY
+        src[:, max(r._iy(y0), 0):r._iy(y1) + 1, max(r._ix(x0), 0):r._ix(x1) + 1] = True
+        path = r.astar(code, src, dst & ~src) if dst.any() else None
+        if path is None: print("  GND pad still isolated:", ref, num); continue
+        runs, vias = r.simplify(code, path); r.commit(code, runs, vias); n += 1
+    return n
+
 def chamfer_corners(b, keep, max_c=1.25):
     """Cut 90-degree (and sharper) corners between two straight tracks of one net on one layer at 45 degrees."""
-    r = GridRouter(b, OX, OY, W, H, clearance=0.3, track_w=0.35, keepouts=())
+    r = GridRouter(b, OX, OY, W, H, clearance=CLR, track_w=0.35, keepouts=())
     g = r.g; n_cut = 0
     pads_vias = []
     for fp in b.GetFootprints(): pads_vias += list(fp.Pads())
@@ -162,10 +223,14 @@ def main():
         route(f"G{i}", 0.5, (f"RG{i}", "1"), (f"RS{i}", "1"), layer=B_CU)
     bus = [(f"RG{i}", "2") for i in range(1, NFET + 1)] + [("TP1", "1")]
     route("FG", 0.6, *bus, layer=B_CU)
+    fg0 = pad_xy("RG1", "2")
+    route("FG", 0.6, fg0, (fg0[0], 32.0), layer=B_CU)          # gate bus leaves the power section here
     vk = pad_xy("RK1", "2")
     route("VIN_K", 0.6, vk, (vk[0], 15.24), (vk[0] - 1.27, 16.51), (vk[0] - 1.27, 31.0), layer=B_CU)
+    BODIES[:] = bodies(b)
     # 2. router: wide, medium, then signal nets; F.Cu stays out of the power pours
     keep = [(x0, y0, x1, y1, 0) for (x0, y0, x1, y1) in ((0.0, 0.0, 110.0, 13.97), (0.0, 13.97, 15.0, 16.5), (23.0, 13.97, 118.0, 30.0))]
+    keep.append((31.0, 0.0, W, 31.5, 1))        # B.Cu under the power section carries the GND current between the XT60s
     code = lambda n: b.FindNet(n).GetNetCode()
     skip = {"VIN", "VOUT", "GND", ""}
     all_nets = {p.GetNetCode() for fp in b.GetFootprints() for p in fp.Pads() if p.GetNetname() not in skip}
@@ -186,6 +251,10 @@ def main():
     for ref in ("J1", "J2", "D1", "D2"):
         for p in b.FindFootprintByReference(ref).Pads():
             if p.GetNetname() == "GND": p.SetZoneConnection(pcbnew.ZONE_CONNECTION_FULL)
+    for _ in range(3):                                         # GND pads the pours cannot reach get a track
+        iso = isolated_gnd_pads(b, path)
+        if not iso: break
+        print("  isolated GND pads:", iso, "joined:", join_gnd_pads(b, keep, iso))
     # branding: logo in the free corner of the VIN band, name under it
     hl = logo(b, pcbnew.F_SilkS, 84.0, 1.4, 21.0)
     t = pcbnew.PCB_TEXT(b); t.SetText(NAME); t.SetLayer(pcbnew.F_SilkS); t.SetPosition(P(94.5, 1.4 + hl + 1.3))
@@ -196,7 +265,9 @@ def main():
     import json
     pro = path.replace(".kicad_pcb", ".kicad_pro")
     d = json.load(open(pro)); d["board"]["design_settings"]["rule_severities"]["silk_edge_clearance"] = "ignore"
+    d["board"]["design_settings"]["rule_severities"]["lib_footprint_mismatch"] = "ignore"   # extra 3D model paths
     json.dump(d, open(pro, "w"), indent=2)
+    import fix_3d_models; fix_3d_models.fix(path)           # 3D models for KiCad 7, 8 and 9
     drc(path)
 
 def drc(path):

@@ -38,6 +38,8 @@ class GridRouter:
         self.occ_v = np.zeros((2, self.ny, self.nx), dtype=np.int32)
         self.occ_s = np.zeros((2, self.ny, self.nx), dtype=np.int32)
         self.own = {}                                                   # net -> bool array (2, ny, nx) of its copper
+        self.extra = np.zeros((2, self.ny, self.nx), dtype=np.float32)    # soft cost: component bodies to stay out of
+        self._path_cells = None
         g = self.g
         # board edge
         for occ, r in ((self.occ_t, self.edge_cl + self.tw / 2 + self.margin), (self.occ_v, self.edge_cl + self.vd / 2 + self.margin),
@@ -166,7 +168,7 @@ class GridRouter:
                 if not (0 <= yy < self.ny and 0 <= xx < self.nx): continue
                 if not self._passable(net, l, yy, xx): continue
                 if dy and dx and not (self._passable(net, l, y, xx) and self._passable(net, l, yy, x)): continue
-                nk = (l, yy, xx); ng = gc + c * lc
+                nk = (l, yy, xx); ng = gc + c * (lc + self.extra[l, yy, xx])
                 if ng < g.get(nk, 1e18):
                     g[nk] = ng; came[nk] = k; heapq.heappush(heap, (ng + h(yy, xx), ng, nk))
             ol = 1 - l; nk = (ol, y, x)
@@ -175,6 +177,14 @@ class GridRouter:
                 if ng < g.get(nk, 1e18):
                     g[nk] = ng; came[nk] = k; heapq.heappush(heap, (ng + h(y, x), ng, nk))
         return None
+
+    def soft_box(self, x0, y0, x1, y1, layer, cost):
+        iy0, iy1 = max(self._iy(y0), 0), min(self._iy(y1) + 1, self.ny); ix0, ix1 = max(self._ix(x0), 0), min(self._ix(x1) + 1, self.nx)
+        self.extra[layer, iy0:iy1, ix0:ix1] = np.maximum(self.extra[layer, iy0:iy1, ix0:ix1], cost)
+
+    def _soft_ok(self, li, y, x):
+        """A shortcut may not cross a component body the routed path itself did not cross."""
+        return self.extra[li, y, x] == 0 or self._path_cells is None or (y, x) in self._path_cells
 
     def _clear_line(self, net, li, a, b):
         (y0, x0), (y1, x1) = a, b
@@ -185,7 +195,7 @@ class GridRouter:
                 y = y0 + (dy // n if n else 0) * i if dy else y0; x = x0 + (dx // n if n else 0) * i if dx else x0
                 if dy and n: y = y0 + (1 if dy > 0 else -1) * i
                 if dx and n: x = x0 + (1 if dx > 0 else -1) * i
-                if not self._passable(net, li, y, x): return False
+                if not self._passable(net, li, y, x) or not self._soft_ok(li, y, x): return False
             return True
         n = int(max(abs(dy), abs(dx)) * 3) + 1
         for i in range(n + 1):
@@ -215,12 +225,30 @@ class GridRouter:
         out = []
         for run in runs:
             li = run[0][0]; pts = [(k[1], k[2]) for k in run]; res = [pts[0]]; i = 0
+            self._path_cells = set(pts)
             while i < len(pts) - 1:
-                j = len(pts) - 1
-                while j > i + 1 and not (self._octi(pts[i], pts[j]) and self._clear_line(net, li, pts[i], pts[j])): j -= 1
+                j = len(pts) - 1; bend = None
+                while j > i + 1:
+                    if self._octi(pts[i], pts[j]) and self._clear_line(net, li, pts[i], pts[j]): break
+                    if self.octilinear:
+                        bend = self._dogleg(net, li, pts[i], pts[j])
+                        if bend is not None: break
+                    j -= 1
+                if bend is not None and j > i + 1: res.append(bend)
                 res.append(pts[j]); i = j
             out.append((li, res))
+        self._path_cells = None
         return out, vias
+
+    def _dogleg(self, net, li, a, b):
+        """One 45-degree segment and one straight segment from a to b (either order), if both are clear."""
+        dy, dx = b[0] - a[0], b[1] - a[1]
+        m = min(abs(dy), abs(dx))
+        if m == 0 or abs(dy) == abs(dx): return None
+        sy, sx = (1 if dy > 0 else -1), (1 if dx > 0 else -1)
+        for k in ((a[0] + sy * m, a[1] + sx * m), (b[0] - sy * m, b[1] - sx * m)):
+            if self._clear_line(net, li, a, k) and self._clear_line(net, li, k, b): return k
+        return None
 
     def commit(self, net, runs, vias):
         n = self.b.FindNet(self.b.GetNetInfo().GetNetItem(net).GetNetname())
