@@ -17,6 +17,8 @@ There are two versions in this repository:
 
 ![Through-hole board, both layers](docs/board_tht_layers.png)
 
+Schematic (drawn from the PCB netlist): [`docs/kill_switch_tht_schematic.png`](docs/kill_switch_tht_schematic.png), [SVG](docs/kill_switch_tht_schematic.svg).
+
 ## Why no reed switch in the power path
 
 A reed switch carries well under 1 A. Even large Littelfuse/Hamlin reeds are rated around 1–3 A and burn at the arc of a DC break at tens of amps. So the magnet only drives sensors. The current is switched by MOSFETs.
