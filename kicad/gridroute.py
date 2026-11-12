@@ -44,10 +44,12 @@ class GridRouter:
                        (self.occ_s, self.edge_cl + self.tw / 2 + self.margin + 0.12)):
             k = int(math.ceil(r / g))
             occ[:, :k, :] = -1; occ[:, -k:, :] = -1; occ[:, :, :k] = -1; occ[:, :, -k:] = -1
-        for (x0, y0, x1, y1) in self.keepouts:
+        for ko in self.keepouts:
+            (x0, y0, x1, y1), layers = ko[:4], ((ko[4],) if len(ko) > 4 else (0, 1))   # optional 5th item: 0 = F.Cu, 1 = B.Cu
             for occ, r in ((self.occ_t, self.tw / 2 + self.margin), (self.occ_v, self.vd / 2 + self.margin), (self.occ_s, self.tw / 2 + self.margin + 0.12)):
                 ix0, ix1 = self._ix(x0 - r), self._ix(x1 + r) + 1; iy0, iy1 = self._iy(y0 - r), self._iy(y1 + r) + 1
-                occ[:, max(iy0, 0):iy1, max(ix0, 0):ix1] = -1
+                lys = (0, 1) if occ is self.occ_v else layers                   # a via needs both layers free
+                for li in lys: occ[li, max(iy0, 0):iy1, max(ix0, 0):ix1] = -1
         for fp in self.b.GetFootprints():
             for p in fp.Pads(): self._add_pad(p)
         for t in self.b.GetTracks(): self._add_track(t)
@@ -194,6 +196,12 @@ class GridRouter:
                     if not (v == 0 or v == net): return False
         return True
 
+    octilinear = False
+    def _octi(self, a, b):
+        if not self.octilinear: return True
+        dy, dx = b[0] - a[0], b[1] - a[1]
+        return dy == 0 or dx == 0 or abs(dy) == abs(dx)
+
     def simplify(self, net, path):
         """Split by layer, string-pull each run. Returns [(layer, [(iy, ix), ...]), ...] and via cells."""
         runs, vias = [], []
@@ -209,7 +217,7 @@ class GridRouter:
             li = run[0][0]; pts = [(k[1], k[2]) for k in run]; res = [pts[0]]; i = 0
             while i < len(pts) - 1:
                 j = len(pts) - 1
-                while j > i + 1 and not self._clear_line(net, li, pts[i], pts[j]): j -= 1
+                while j > i + 1 and not (self._octi(pts[i], pts[j]) and self._clear_line(net, li, pts[i], pts[j])): j -= 1
                 res.append(pts[j]); i = j
             out.append((li, res))
         return out, vias

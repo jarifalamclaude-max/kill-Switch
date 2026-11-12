@@ -94,7 +94,7 @@ def auto_refs(B, edge):
         for p in fp.Pads():
             bb = p.GetBoundingBox(); out.append((pcbnew.ToMM(bb.GetLeft()) - inflate, pcbnew.ToMM(bb.GetTop()) - inflate, pcbnew.ToMM(bb.GetRight()) + inflate, pcbnew.ToMM(bb.GetBottom()) + inflate))
         for g in fp.GraphicalItems():
-            if g.GetLayer() in (pcbnew.F_SilkS,) and type(g).__name__ == "FP_SHAPE":
+            if g.GetLayer() in (pcbnew.F_SilkS,) and type(g).__name__ in ("FP_SHAPE", "FP_TEXT"):
                 bb = g.GetBoundingBox(); out.append((pcbnew.ToMM(bb.GetLeft()) - 0.1, pcbnew.ToMM(bb.GetTop()) - 0.1, pcbnew.ToMM(bb.GetRight()) + 0.1, pcbnew.ToMM(bb.GetBottom()) + 0.1))
         return out
     obstacles = []

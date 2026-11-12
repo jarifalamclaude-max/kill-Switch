@@ -1,0 +1,168 @@
+* Models for the magnetic kill switch simulation (ngspice 42).
+* MOSFET, diode and regulator models are fitted to datasheet headline values; the controller and comparator
+* models are behavioural (they reproduce the datasheet thresholds, currents and timer logic, not the transistors).
+
+* ---------------------------------------------------------------- power MOSFETs
+* IPT007N06N: 60 V, Rds(on) max 0.75 mOhm at Vgs 10 V (Rd + Rs + channel), Qg ~216 nC, Vgs(th) ~2.8 V
+.model IPT007 VDMOS(Vto=2.8 Kp=600 Rd=0.28m Rs=0.28m Rg=1.2 Cgs=16n Cgdmax=6n Cgdmin=0.15n a=0.3
++ Cjo=6n Is=1e-11 N=1.05 Rb=0.6m BV=60 Tt=40n lambda=0.001 mtriode=1)
+* FQD11P06: -60 V, ~185 mOhm, pre-charge switch
+.model FQD11P06 VDMOS(pchan Vto=-3.0 Kp=6 Rd=0.07 Rs=0.07 Cgs=0.5n Cgdmax=0.25n Cgdmin=0.05n a=0.3 Cjo=0.3n BV=60)
+* 2N7002 and BSS84 small-signal switches
+.model M2N7002 VDMOS(Vto=1.8 Kp=0.35 Rd=1.0 Rs=0.5 Cgs=30p Cgdmax=10p Cgdmin=3p a=0.3 Cjo=20p BV=60)
+.model MBSS84 VDMOS(pchan Vto=-1.6 Kp=0.15 Rd=3 Rs=2 Cgs=25p Cgdmax=8p Cgdmin=3p a=0.3 Cjo=15p BV=50)
+.model MMBT3906 PNP(Is=1.4f Bf=180 Br=4 Vaf=20 Ikf=80m Cje=8p Cjc=4.5p Tf=0.5n Tr=30n)
+
+* ---------------------------------------------------------------- diodes
+* SMCJ26A: stand-off 26 V, breakdown 28.9 V min, 42.1 V at 35.7 A
+.model DSMCJ26A D(Is=1e-12 N=1.1 Rs=0.35 BV=29.5 IBV=1m Cjo=3n)
+.model DZ15 D(Is=1e-14 Rs=12 N=1 BV=14.9 IBV=5m Cjo=40p)
+.model DZ12 D(Is=1e-14 Rs=12 N=1 BV=11.9 IBV=5m Cjo=50p)
+.model DZ6V2 D(Is=1e-14 Rs=8 N=1 BV=6.1 IBV=5m Cjo=100p)
+.model DLEDR D(Is=1e-19 N=1.6 Rs=5 Cjo=30p)
+.model DLEDB D(Is=1e-30 N=2.0 Rs=8 Cjo=30p)
+
+* ---------------------------------------------------------------- PC817 optocoupler (same as the torpedo driver)
+.subckt PC817 a k c e PARAMS: CTR=1.0 CJC=15p
+Dled a m DOPTO
+Vs m k 0
+Fph c b Vs {CTR/200}
+Qp c b e QOPTO
+Rbe b e 200meg
+.model DOPTO D(Is=8.4e-13 N=2 Rs=2 Cjo=30p)
+.model QOPTO NPN(Is=1e-14 Bf=200 Br=5 Vaf=100 Cjc={CJC} Cje=10p Tf=5n Tr=2u)
+.ends
+
+* ---------------------------------------------------------------- LM317 (adjustable, 1.25 V reference, 50 uA ADJ current)
+.subckt LM317 adj out in
+Breg o1 0 V = min(V(adj) + 1.25, max(V(in) - 1.7, 0))
+Ro o1 out 0.2
+Iadj 0 adj 50u
+.ends
+
+* ---------------------------------------------------------------- LM393 dual open-collector comparator
+* pins as on the SOIC-8: 1 out1, 2 in1-, 3 in1+, 4 gnd, 5 in2+, 6 in2-, 7 out2, 8 vcc
+.subckt LM393 o1 m1 p1 gnd p2 m2 o2 vcc
+B1 o1 gnd I = max(V(o1, gnd), 0) / 30 * 0.5 * (1 + tanh((V(m1) - V(p1)) / 2m)) * 0.5 * (1 + tanh((V(vcc, gnd) - 2) / 0.1))
+B2 o2 gnd I = max(V(o2, gnd), 0) / 30 * 0.5 * (1 + tanh((V(m2) - V(p2)) / 2m)) * 0.5 * (1 + tanh((V(vcc, gnd) - 2) / 0.1))
+C1 o1 gnd 5p
+C2 o2 gnd 5p
+Rq vcc gnd 10k
+.ends
+
+* ---------------------------------------------------------------- DRV5033 omnipolar Hall switch, open drain
+* mag: control node, 1 V = magnet field above the operate point. stuck = 1 forces the output low (fault case)
+.subckt DRV5033 vcc out gnd mag stuck
+Bout out gnd I = max(V(out, gnd), 0) / 40 * min(1, V(mag) + V(stuck)) * 0.5 * (1 + tanh((V(vcc, gnd) - 2.5) / 0.1))
+Rq vcc gnd 1.9k
+Cout out gnd 10p
+.ends
+
+* ---------------------------------------------------------------- LM5060 high-side protection controller (behavioural)
+* Datasheet values: gate 24 uA (charge pump, ~VIN+12 V), 2.2 mA off pull-down, 80 mA fault pull-down; SENSE 16 uA;
+* VDS fault when OUT < SENSE; timer 6 uA start-up, 11 uA fault, 2.0 V; EN on 2.0 V / off 0.8 V; UVLO 1.6 V,
+* 180 mV hysteresis, 5.5 uA pull-down below threshold; OVP 2.0 V / 1.76 V. GATEON = 0 makes the gate source
+* stay on regardless (used to test the second kill path).
+.subckt LM5060 sns vin ovp uv en gnd tmr pgd out gate PARAMS: GATEON=0
+* schmitt states (RC-delayed so ngspice sees no algebraic loop)
+Ben_r en_r 0 V = 0.5 * (1 + tanh((V(en, gnd) - 1.4 + 0.3 * (V(en_s) - 0.5)) / 0.02))
+Ren en_r en_s 1k
+Cen en_s 0 1n
+Buv_r uv_r 0 V = 0.5 * (1 + tanh((V(uv, gnd) - 1.6 + 0.18 * V(uv_s)) / 0.01))
+Ruv uv_r uv_s 1k
+Cuv uv_s 0 1n
+Buvpd uv gnd I = 5.5u * (1 - V(uv_s))
+Bov_r ov_r 0 V = 0.5 * (1 + tanh((V(ovp, gnd) - 2.0 + 0.24 * V(ov_s)) / 0.01))
+Rov ov_r ov_s 1k
+Cov ov_s 0 1n
+Bvin vin_ok 0 V = 0.5 * (1 + tanh((V(vin, gnd) - 5.0) / 0.1))
+* base enable and fault reset (EN or UVLO low clears the latch)
+Bonb onb 0 V = V(en_s) * V(uv_s) * (1 - V(ov_s)) * V(vin_ok)
+Brst rst 0 V = V(en_s) * V(uv_s)
+* VDS comparator: fault when OUT is below SENSE
+Isns sns gnd 16u
+Bvds vdsf 0 V = 0.5 * (1 + tanh((V(sns) - V(out)) / 2m))
+Bhi thi 0 V = 0.5 * (1 + tanh((V(tmr, gnd) - 2.0) / 5m))
+* run latch: set when the timer reaches 2 V without a VDS fault; fault latch: timer at 2 V with a VDS fault
+Brun_r run_r 0 V = V(onb) * (1 - (1 - V(thi) * (1 - V(vdsf))) * (1 - 0.5 * (1 + tanh((V(run_s) - 0.5) / 0.05))))
+Rrun run_r run_s 1k
+Crun run_s 0 10n
+Bflt_r flt_r 0 V = V(rst) * (1 - (1 - V(thi) * V(vdsf)) * (1 - 0.5 * (1 + tanh((V(flt_s) - 0.5) / 0.05))))
+Rflt flt_r flt_s 1k
+Cflt flt_s 0 10n
+Bon on 0 V = V(onb) * (1 - V(flt_s))
+* timer: 6 uA during start-up, 11 uA on a VDS fault once running, discharged otherwise
+Btmr gnd tmr I = V(on) * ((1 - V(run_s)) * 6u + V(run_s) * V(vdsf) * 11u) - max(V(tmr, gnd), 0) / 2k * ((1 - V(on)) + V(on) * V(run_s) * (1 - V(vdsf)))
+* gate: charge pump source up to VIN + 12 V, 2.2 mA off sink, 80 mA fault sink
+Bgsrc vin_cp gate I = max(V(on), {GATEON}) * 24u * 0.5 * (1 + tanh((V(vin) + 12 - V(gate)) / 0.2))
+Bcp vin_cp gnd V = V(vin, gnd) + 14
+Bgoff gate gnd I = (1 - max(V(on), {GATEON})) * (1 - V(flt_s)) * 2.2m * tanh(max(V(gate, gnd), 0) / 0.3)
+Bgflt gate gnd I = V(flt_s) * (1 - {GATEON}) * 80m * tanh(max(V(gate, gnd), 0) / 0.3)
+* power good: open drain low when running without a VDS fault
+Bpgd pgd gnd I = max(V(pgd, gnd), 0) / 100 * V(run_s) * (1 - V(vdsf))
+Rq vin gnd 100k
+.ends
+
+* ---------------------------------------------------------------- KY-003 style Hall module (A3144) and its board parts
+* open-collector output pulled low with the magnet; module: 10k pull-up and LED + 680 R from VCC to S, ~4 mA quiescent
+.subckt KY003 s vcc gnd mag stuck
+Bout s gnd I = max(V(s, gnd), 0) / 25 * min(1, V(mag) + V(stuck)) * 0.5 * (1 + tanh((V(vcc, gnd) - 4.0) / 0.1))
+Rpu vcc s 10k
+Rled vcc la 680
+Dled la s DLEDR
+Rq vcc gnd 1.2k
+.ends
+
+* ---------------------------------------------------------------- BAT54 Schottky (gate-drive steering diode)
+.model DBAT54 D(Is=2e-7 N=1.05 Rs=1 Cjo=10p BV=30 IBV=1u)
+
+* ---------------------------------------------------------------- LM339 quad open-collector comparator
+* SOIC-14 pins: 1 out2, 2 out1, 3 vcc, 4 in1-, 5 in1+, 6 in2-, 7 in2+, 8 in3-, 9 in3+, 10 in4-, 11 in4+, 12 gnd, 13 out4, 14 out3
+.subckt LM339 o2 o1 vcc m1 p1 m2 p2 m3 p3 m4 p4 gnd o4 o3
+B1 o1 gnd I = max(V(o1, gnd), 0) / 30 * 0.5 * (1 + tanh((V(m1) - V(p1)) / 2m)) * 0.5 * (1 + tanh((V(vcc, gnd) - 2) / 0.1))
+B2 o2 gnd I = max(V(o2, gnd), 0) / 30 * 0.5 * (1 + tanh((V(m2) - V(p2)) / 2m)) * 0.5 * (1 + tanh((V(vcc, gnd) - 2) / 0.1))
+B3 o3 gnd I = max(V(o3, gnd), 0) / 30 * 0.5 * (1 + tanh((V(m3) - V(p3)) / 2m)) * 0.5 * (1 + tanh((V(vcc, gnd) - 2) / 0.1))
+B4 o4 gnd I = max(V(o4, gnd), 0) / 30 * 0.5 * (1 + tanh((V(m4) - V(p4)) / 2m)) * 0.5 * (1 + tanh((V(vcc, gnd) - 2) / 0.1))
+C1 o1 gnd 5p
+C2 o2 gnd 5p
+C3 o3 gnd 5p
+C4 o4 gnd 5p
+Rq vcc gnd 6k
+.ends
+
+* SMDJ26A: 3 kW version of the same 26 V stand-off TVS (about half the dynamic resistance of the SMCJ26A)
+.model DSMDJ26A D(Is=2e-12 N=1.1 Rs=0.17 BV=29.5 IBV=1m Cjo=6n)
+
+* ================================================================ through-hole version (ks_tht.kicad_pcb)
+* IRFB3206: 60 V, Rds(on) 2.4 typ / 3.0 max mOhm at 10 V, +0.4 mOhm for the legs and joints; Ciss 6.5 nF, Qg 120 nC, Qgd 35 nC
+.model IRFB3206 VDMOS(Vto=3.2 Kp=160 Rd=1.4m Rs=1.3m Rg=1.0 Cgs=5.6n Cgdmax=4n Cgdmin=0.3n a=0.5 Cjo=2.5n BV=60 Is=1e-11 N=1.1 Rb=1m)
+* IRF9540N: -100 V, 117 mOhm at -10 V
+.model IRF9540N VDMOS(pchan Vto=-3 Kp=8 Rd=0.05 Rs=0.04 Cgs=1.3n Cgdmax=0.6n Cgdmin=0.1n a=0.3 Cjo=0.6n BV=100)
+.model M2N7000 VDMOS(Vto=2.1 Kp=0.3 Rd=1.0 Rs=0.5 Cgs=20p Cgdmax=10p Cgdmin=3p a=0.3 Cjo=15p BV=60)
+.model Q2N3904 NPN(Is=6.734f Bf=200 Vaf=74 Ikf=66.8m Br=0.74 Cje=4.5p Cjc=3.6p Tf=301p Tr=239n Rb=10 Rc=1)
+.model Q2N3906 PNP(Is=1.41f Bf=180 Vaf=18.7 Ikf=80m Br=4.98 Cje=8.1p Cjc=9.7p Tf=639p Tr=33.4n Rb=10 Rc=2.5)
+.model QBC327 PNP(Is=5f Bf=250 Vaf=40 Ikf=0.8 Br=10 Cje=50p Cjc=20p Tf=0.6n Tr=40n Rb=5 Rc=0.3)
+.model D1N4148 D(Is=2.52n N=1.752 Rs=0.568 Cjo=4p BV=100 IBV=100u Tt=11.5n)
+.model DBAT85 D(Is=2e-7 N=1.05 Rs=1 Cjo=10p BV=30 IBV=1u)
+.model D1N4007 D(Is=7.02n N=1.8 Rs=0.0341 Cjo=10p BV=1000 IBV=5u Tt=4.3u)
+* 5KP28A: 5 kW, VBR 31.1-34.4 V, clamp 45.4 V at 110 A; 1.5KE33A: VBR 31.4-34.7 V, clamp 45.7 V at 33 A
+.model D5KP28A D(Is=1e-11 N=1.1 Rs=0.1 BV=32.5 IBV=1m Cjo=15n)
+.model D15KE33A D(Is=1e-12 N=1.1 Rs=0.36 BV=33 IBV=1m Cjo=3n)
+* TL431 with cathode tied to REF behaves as a 2.495 V shunt
+.model DTL431 D(Is=1e-14 N=1 Rs=0.2 BV=2.495 IBV=1m)
+* L7805: 2 V dropout, 5 mA quiescent
+.subckt LM7805 in gnd out
+Breg o1 gnd V = min(5.0, max(V(in, gnd) - 2.0, 0))
+Ro o1 out 0.05
+Iq in gnd 5m
+.ends
+* B0512S-1WR3 isolated 5 V -> 12 V, 1 W, unregulated: ~14.4 V open circuit, ~30 Ohm output resistance, 75 %, 15 mA no-load
+.subckt B0512S gin vin vo0 vo
+Bo o1 vo0 V = 2.88 * max(V(vin, gin), 0)
+Ro o1 om 30
+Vsense om vo 0
+Bi vin gin I = max(V(o1, vo0), 0) * max(i(Vsense), 0) / 0.75 / max(V(vin, gin), 1) + 0.015 * min(1, max(V(vin, gin), 0) / 4)
+Riso vo0 gin 1G
+.ends
+* P6KE18A: 600 W TVS, VWM 15.3 V, VBR 17.1-18.9 V, clamp 25.2 V at 24 A
+.model DP6KE18A D(Is=1e-12 N=1.1 Rs=0.3 BV=17.8 IBV=1m Cjo=1.5n)

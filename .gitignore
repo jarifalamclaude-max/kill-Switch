@@ -1,4 +1,5 @@
 kicad/simulation/out/
+kicad/simulation/out_tht/
 __pycache__/
 *.pyc
 *.kicad_prl

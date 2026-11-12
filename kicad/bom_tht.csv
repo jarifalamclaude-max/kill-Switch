@@ -1,0 +1,96 @@
+ref,value,footprint
+C1,"47u 50V",CP_Radial_D6.3mm_P2.50mm
+C2,"10u 25V",CP_Radial_D5.0mm_P2.00mm
+C3,"100n",C_Disc_D5.0mm_W2.5mm_P5.00mm
+C4,"10u 16V",CP_Radial_D5.0mm_P2.00mm
+C5,"22u 25V",CP_Radial_D5.0mm_P2.00mm
+C6,"220n 100V film",C_Rect_L7.2mm_W3.5mm_P5.00mm_FKS2_FKP2_MKS2_MKP2
+C7,"10u 16V",CP_Radial_D5.0mm_P2.00mm
+C8,"100n",C_Disc_D5.0mm_W2.5mm_P5.00mm
+C9,"10n",C_Disc_D5.0mm_W2.5mm_P5.00mm
+C10,"10n",C_Disc_D5.0mm_W2.5mm_P5.00mm
+C11,"3.3u X7R 50V",C_Disc_D5.0mm_W2.5mm_P5.00mm
+D1,"1.5KE33A",D_DO-201AE_P15.24mm_Horizontal
+D2,"1.5KE33A",D_DO-201AE_P15.24mm_Horizontal
+D3,"BZX55C12",D_DO-35_SOD27_P2.54mm_Vertical_KathodeUp
+D4,"1N4007",D_DO-41_SOD81_P10.16mm_Horizontal
+D5,"1N4744A",D_DO-41_SOD81_P10.16mm_Horizontal
+D6,"1N4148",D_DO-35_SOD27_P2.54mm_Vertical_KathodeUp
+D7,"blue HALL",LED_D3.0mm
+D8,"blue REED",LED_D3.0mm
+D9,"red LIVE",LED_D3.0mm
+D10,"1N4148",D_DO-35_SOD27_P2.54mm_Vertical_KathodeUp
+D11,"P6KE18A",D_DO-15_P10.16mm_Horizontal
+F1,"RXEF050 (0.5 A, 72 V)",Fuse_Bourns_MF-RHT050
+J1,"XT60 BATTERY IN",AMASS_XT60PW-M_1x02_P7.20mm_Horizontal
+J2,"XT60 TO ESCs",AMASS_XT60PW-F_1x02_P7.20mm_Horizontal
+J3,"HALL MODULE (KY-003: S + -)",JST_XH_B3B-XH-A_1x03_P2.50mm_Vertical
+J4,"REED (MC-38)",JST_XH_B2B-XH-A_1x02_P2.50mm_Vertical
+Q1,"IRFB3206",TO-220-3_Vertical
+Q2,"IRFB3206",TO-220-3_Vertical
+Q3,"IRFB3206",TO-220-3_Vertical
+Q4,"IRFB3206",TO-220-3_Vertical
+Q5,"IRF9540N",TO-220-3_Vertical
+Q6,"2N7000",TO-92_Inline_Wide
+Q7,"2N3906",TO-92_Inline_Wide
+Q8,"2N3904",TO-92_Inline_Wide
+Q9,"2N3904",TO-92_Inline_Wide
+Q10,"2N7000",TO-92_Inline_Wide
+Q11,"2N7000",TO-92_Inline_Wide
+Q12,"BC327",TO-92_Inline_Wide
+R1,"47k",R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical
+R2,"22k",R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical
+R3,"22 2W",R_Axial_DIN0414_L11.9mm_D4.5mm_P15.24mm_Horizontal
+R4,"22 2W",R_Axial_DIN0414_L11.9mm_D4.5mm_P15.24mm_Horizontal
+R5,"10",R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical
+R6,"10k",R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical
+R7,"10k",R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical
+R8,"100",R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical
+R9,"100",R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical
+R10,"10k",R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical
+R11,"47k",R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical
+R12,"4.7k",R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical
+R13,"1k",R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical
+R14,"1k",R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical
+R15,"100k",R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical
+R16,"10k",R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical
+R17,"10k",R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical
+R18,"10k",R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical
+R19,"100k",R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical
+R20,"220",R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical
+R21,"75k 1%",R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical
+R22,"10k 1%",R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical
+R23,"470k",R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical
+R24,"160k 1%",R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical
+R25,"10k 1%",R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical
+R26,"1M",R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical
+R27,"68k",R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical
+R28,"1k",R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical
+R29,"10k",R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical
+R30,"10k",R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical
+R31,"1k",R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical
+R32,"330",R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical
+R33,"4.7k",R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical
+R34,"22k",R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical
+R35,"10k",R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical
+R36,"47",R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical
+R37,"10k",R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical
+R38,"1k",R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical
+RG1,"10",R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal
+RG2,"10",R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal
+RG3,"10",R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal
+RG4,"10",R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal
+RK1,"0R",R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal
+RK2,"0R",R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal
+RS1,"1M",R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical
+RS2,"1M",R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical
+RS3,"1M",R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical
+RS4,"1M",R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical
+TP1,"FG",TestPoint_THTPad_D2.0mm_Drill1.0mm
+TP2,"EN",TestPoint_THTPad_D2.0mm_Drill1.0mm
+TP3,"V5",TestPoint_THTPad_D2.0mm_Drill1.0mm
+TP4,"GND",TestPoint_THTPad_D2.0mm_Drill1.0mm
+U1,"L7805CV",TO-220-3_Horizontal_TabDown
+U2,"LM339N",DIP-14_W7.62mm
+U3,"B0512S-1WR3",PinHeader_1x04_P2.54mm_Vertical
+U4,"PC817",DIP-4_W7.62mm
