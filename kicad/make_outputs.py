@@ -11,6 +11,7 @@ gdir = os.path.join(ROOT, f"gerber_{b}"); os.makedirs(gdir, exist_ok=True)
 run = lambda *a: subprocess.run(list(a), check=True, capture_output=True, text=True)
 LAY = "F.Cu,B.Cu,F.Paste,B.Paste,F.Silkscreen,B.Silkscreen,F.Mask,B.Mask,Edge.Cuts"
 run("kicad-cli", "pcb", "export", "gerbers", "--layers", LAY, "--subtract-soldermask", "-o", gdir + "/", pcb)
+run("kicad-cli", "pcb", "export", "pos", "--format", "csv", "--units", "mm", "--side", "both", "-o", os.path.join(gdir, f"ks_{b}-pos.csv"), pcb)
 run("kicad-cli", "pcb", "export", "drill", "--format", "excellon", "--excellon-separate-th", "--generate-map",
     "--map-format", "gerberx2", "-o", gdir + "/", pcb)
 stem = f"ks_{b}"
