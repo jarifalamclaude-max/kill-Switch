@@ -119,7 +119,7 @@
     "cables": {
       "hall": "twisted 3-wire from the KY-003 to J3 (1 = S, 2 = +, 3 = -)",
       "reed": "twisted 2-wire from the MC-38 to J4 (either way round)",
-      "battery": "battery + and - (30 A cont / 60 A burst) as a twisted pair, at least 10 cm from the sensors; 40 A fuse in the + lead"
+      "battery": "battery + and - (100 A) as a twisted pair, at least 10 cm from the sensors; 125-150 A fuse in the + lead"
     }
   },
   "use": {
@@ -131,7 +131,7 @@
       "precharge_start_s": 0.77,
       "precharge_A": "1.4 (4S) / 2.1 (6S)",
       "live_after_plug_in_s": 0.82,
-      "kill_after_plug_out_ms": 1.6,
+      "kill_after_plug_out_ms": 1.5,
       "ignored_sensor_gap_ms": "under ~1 (0.8 ms tested)"
     },
     "release_out_mm_worst": {

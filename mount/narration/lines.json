@@ -1,0 +1,11 @@
+[
+ {"id": "01", "at": "0.4", "text": "Where do the sensors go? Inside the hull, right behind the magnet dock."},
+ {"id": "02", "at": "5.2", "text": "The dock is glued on the outside. The plug's magnet points straight through the wall, with its south pole facing the hull."},
+ {"id": "03", "at": "11.2", "text": "On the inside of the wall, mark a small cross where the dock's axis comes through."},
+ {"id": "04", "at": "17.2", "text": "The printed bracket goes on that cross. Its small window sits on the axis, the two posts hold the Hall module, and the rails hold the reed contact."},
+ {"id": "05", "at": "25.2", "text": "The A3144 Hall chip lies flat in the window, with its printed face against the wall. Its legs run down the channel to the KY-003 board, which screws onto the two posts."},
+ {"id": "06", "at": "35.2", "text": "Slide the MC-38 into the rails, long side pointing at the axis. Its end holds the Hall chip flat. Two cable ties lock it in place."},
+ {"id": "07", "at": "44.2", "text": "Run a twisted three-wire cable from the Hall module to J3, and a two-wire cable from the reed to J4. Keep both at least ten centimetres from the battery wires."},
+ {"id": "08", "at": "51.2", "text": "Now switch on and push the plug in. Slide the bracket until both blue LEDs stay on, mark the spot, and glue it with epoxy."},
+ {"id": "09", "at": "60.2", "text": "Test it. Pull the plug, and both LEDs go off. Push it back in, and they light up again."}
+]

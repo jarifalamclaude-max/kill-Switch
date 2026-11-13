@@ -108,7 +108,7 @@ Full lists with quantities: [`kicad/bom_tht_grouped.csv`](kicad/bom_tht_grouped.
 - The dock is glued to the outside of the hull (no holes through the hull). The hull wall must be non-magnetic: acrylic, polycarbonate or aluminium, not steel.
 - The plug carries the magnet with its **south pole toward the hull**: the A3144 only reacts to a south pole on its printed face. If the HALL LED stays off with the plug in, flip the magnet.
 - An O-ring on the plug snaps into a groove in the dock. Pulling it out takes 10–20 N, against 0.29 N of plug weight, 1.4 N at 5 g of vibration and 1.2 N of water drag at 1.5 m/s. A slot along the dock bore lets water in and out, so there is no suction and no trapped water.
-- Inside, a printed bracket holds the A3144 flat against the wall on the plug's axis (9.5 mm from the magnet, about 104 mT, 3× margin) and the MC-38 12 mm off the axis.
+- Inside, a printed bracket holds the A3144 flat against the wall on the plug's axis (9.5 mm from the magnet, about 104 mT, 3× margin) and the MC-38 12 mm off the axis. How to fit it, step by step: [`mount/`](mount/) (video with voice-over).
 - Keep steel away from the sensors. Park the pulled plug at least 120 mm away (30 cm is better), never on a steel part.
 
 ## Pre-dive check
@@ -140,6 +140,7 @@ Full lists with quantities: [`kicad/bom_tht_grouped.csv`](kicad/bom_tht_grouped.
 | `pcb-3d/` | 3D through-hole board with every part and the current paths on the real copper |
 | `3d/` | Tutorial: video `kill_switch_tutorial.mp4` (86 s, English voice-over, 100 A board) and an interactive 3D scene of a diver pulling and re-arming the plug; `make_voice.py` + `narration/` make the voice, `render_video.js` renders and mixes it |
 | `mech/` | Dock, plug, T-handle and inside sensor bracket (OpenSCAD, STL) |
+| `mount/` | Sensor mounting guide: video `sensor_mounting.mp4` (72 s, English voice-over) and a 3D scene of where the Hall (KY-003) and reed (MC-38) go inside the hull and how to fit them |
 | `kicad/build_ks.py`, `route_ks.py`, `ks_power.*`, `gerber/`, `kill_switch_gerber_jlcpcb.zip`, `kill_switch_kicad.zip` | First SMD version (LM5060, M5 lugs, 118 × 120 mm), kept for reference |
 | `calc/` | `design_calc.py`: magnet field, reed placement, cable stray field, timing, plug retention (`report.md`) |
 
